@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Header } from './components/Header';
+import { ReloadPrompt } from './components/ReloadPrompt';
 import { Backtest } from './pages/Backtest';
 import { Dashboard } from './pages/Dashboard';
 
@@ -27,6 +28,7 @@ export const App = (): JSX.Element => {
       <main className="mx-auto w-full max-w-4xl">
         {view === 'dashboard' ? <Dashboard /> : <Backtest />}
       </main>
+      <ReloadPrompt />
     </div>
   );
 };

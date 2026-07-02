@@ -10,9 +10,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // Ship SW updates automatically so an installed home-screen app always
-      // picks up the latest daily data + code on next launch.
-      registerType: 'autoUpdate',
+      // A new SW installs and waits; the UI (ReloadPrompt) surfaces a
+      // "new version" banner so the user chooses when to refresh. Daily *.json
+      // data still updates on its own via the NetworkFirst runtime cache.
+      registerType: 'prompt',
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Smart DCA Dashboard',
