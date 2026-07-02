@@ -6,6 +6,6 @@ import { defineConfig } from 'vite';
 // base is '/stock-news/' for the production build (served from GitHub Pages
 // under that path) and '/' for local dev.
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/stock-news/' : '/',
+  base: '/',
   plugins: [react()],
 }));
