@@ -102,7 +102,7 @@ public/
 ## 6. Implementation Watch-outs
 *   **GitHub Actions cron ดีเลย์ได้** ช่วง peak — 07:00 ไทยยังปลอดภัยเพราะข้อมูลพร้อมตั้งแต่ตี 4
 *   **commit อัตโนมัติจาก Action** push ด้วย `GITHUB_TOKEN` ซึ่ง GitHub **จงใจไม่ให้ trigger workflow อื่นผ่าน `push`** (กันลูป) → `deploy-pages.yml` จึงฟังผ่าน `workflow_run` (เมื่อ noti รันเสร็จ) แทน เพื่อให้เว็บอัปเดตข้อมูลรายวัน; workflow noti ต้องมี `permissions: contents: write`
-*   **Vite `base`:** production build ใช้ `/stock-news/` (ตาม repo name) — ถ้าเปลี่ยนชื่อ repo หรือใช้ custom domain ต้องแก้ `vite.config.ts`
+*   **Vite `base`:** ใช้ `/` เพราะ deploy ผ่าน **custom domain** (smart-dca.appstg.site) ที่ root — ถ้าย้ายไป path ย่อย (เช่น github.io/stock-news/) ต้องเปลี่ยน base กลับ
 *   **prices.json ~280KB/วัน** — git history โตวันละเท่านี้ ถ้ากังวลให้ลด `range` ของ Yahoo (เช่น `2y`); 52wk high ต้องการแค่ 252 จุด
 *   **Yahoo/Google News เป็น unofficial** อาจเปลี่ยน/ล้ม — `collectPrices` degrade ต่อ ticker, `NewsCard` degrade ได้เมื่อ `news.json` ว่าง
 *   **คุณภาพข้อมูล = ของ Yahoo** — ตรวจค่าที่ผิดปกติก่อนเชื่อ signal (เช่น SNDK ที่ Yahoo รายงาน ~$2,032 ต้อง verify ว่าจริงหรือเป็น glitch)
