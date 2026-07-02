@@ -17,14 +17,14 @@ drawdown-driven **Smart DCA** strategy (monthly), plus a daily up/down alert for
 - LINE **Flex** messages; auto-deploy to GitHub Pages.
 
 - Design & decisions: [`plan.md`](./plan.md), [`CONTEXT.md`](./CONTEXT.md), [`docs/adr/`](./docs/adr)
-- No backend. Prices come from Stooq (keyless EOD). The daily signal + news run
-  in a GitHub Action.
+- No backend. Prices, dividends and the USD→THB rate come from Yahoo Finance
+  (keyless EOD). The daily signal + news run in a GitHub Action.
 
 ## Develop
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173  (Stooq is proxied via /stooq in dev)
+npm run dev        # http://localhost:5173  (reads the committed public/*.json)
 npm run typecheck
 npm run build
 ```
