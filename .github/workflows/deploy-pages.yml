@@ -1,10 +1,16 @@
 name: Deploy to GitHub Pages
 
 on:
-  # Deploy on code pushes AND on the daily data-refresh commits from the
-  # notification workflow (so the live dashboard shows fresh prices/news).
+  # Deploy on code pushes by a human.
   push:
     branches: [main]
+  # Deploy after the daily notification workflow finishes: its data-refresh
+  # commit is pushed with GITHUB_TOKEN, which by design does NOT trigger other
+  # workflows via `push`, so we listen for its completion instead. This keeps
+  # the live dashboard's prices/news fresh.
+  workflow_run:
+    workflows: ["Daily LINE Smart DCA"]
+    types: [completed]
   workflow_dispatch: {}
 
 permissions:
