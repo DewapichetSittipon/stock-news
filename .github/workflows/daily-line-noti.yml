@@ -45,6 +45,8 @@ jobs:
           if git diff --staged --quiet; then
             echo "No data changes to commit."
           else
-            git commit -m "chore: daily data refresh [skip ci]"
+            # No [skip ci]: this push should trigger the Pages deploy so the
+            # live dashboard picks up the fresh prices/news.
+            git commit -m "chore: daily data refresh"
             git push
           fi

@@ -1,8 +1,11 @@
 # 📊 Smart DCA Dashboard
 
+**Live:** https://dewapichetsittipon.github.io/stock-news/
+
 Pure-frontend dashboard for four ETFs/stocks (VOO, SCHD, QQQM, SNDK) with a
-daily LINE notification recommending how aggressively to buy each, using a
-drawdown-driven **Smart DCA** strategy.
+LINE notification recommending how aggressively to buy each, using a
+drawdown-driven **Smart DCA** strategy (monthly), plus a daily up/down alert for
+`daily`-mode tickers.
 
 - Design & decisions: [`plan.md`](./plan.md), [`CONTEXT.md`](./CONTEXT.md), [`docs/adr/`](./docs/adr)
 - No backend. Prices come from Stooq (keyless EOD). The daily signal + news run
