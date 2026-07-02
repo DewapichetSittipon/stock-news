@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -7,6 +8,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 // GitHub Action — no dev proxy or API key needed.
 export default defineConfig({
   base: '/',
+  // Money logic (DCA multiplier, backtest, indicators) runs in a plain Node
+  // environment — no DOM needed. `npm test` runs these once; `test:watch` reruns.
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+  },
   plugins: [
     react(),
     VitePWA({
