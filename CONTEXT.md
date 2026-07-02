@@ -40,18 +40,32 @@ amount regardless of price.
 _Avoid_: DCA (unqualified), averaging in
 
 **Base Contribution**:
-The per-ticker baht amount representing a 1x buy, defined in a repo config file
-(read by both the UI and the Action). The daily recommendation is Base
-Contribution × Buy Multiplier. Treated as a budget only — no USD conversion or
-share count is computed; the notification shows the USD price alongside for
-reference, and the user's broker handles the actual conversion.
+The per-ticker **monthly** baht amount representing a 1x buy, for `dca`-mode
+tickers only, defined in a repo config file (read by both the UI and the Action). The monthly recommendation is
+Base Contribution × Buy Multiplier. Treated as a budget only — no USD conversion
+or share count is computed; the notification shows the USD price alongside for
+reference, and the user's broker handles the actual conversion. The LINE push
+fires once a month (see docs/adr/0005).
 _Avoid_: base amount, unit, lot
 
 **Ticker Config**:
-The committed repo file listing which tickers the system tracks and each one's
-Base Contribution. The single source of truth for both the dashboard's default
-view and the set the Action notifies on. Default: VOO, SCHD, QQQM, SNDK.
+The committed repo file listing which tickers the system tracks, each one's
+Ticker Mode, and (for DCA tickers) its Base Contribution. The single source of
+truth for both the dashboard and the Action. Default: VOO, SCHD, QQQM (dca) +
+SNDK (daily).
 _Avoid_: symbols list, universe
+
+**Ticker Mode**:
+Whether a ticker is a `dca` holding (monthly Smart DCA buy recommendation) or a
+`daily` one (tracked for day-over-day movement, not a DCA buy). Set per ticker
+in Ticker Config. See docs/adr/0006.
+_Avoid_: kind, category
+
+**Daily Change**:
+A `daily`-mode ticker's move versus the previous EOD close, as a signed percent
+and dollar amount. Shown on the dashboard and pushed to LINE once per new EOD
+close. Distinct from Drawdown (which is vs the 52-Week High).
+_Avoid_: delta, movement
 
 **News Digest**:
 A per-ticker list of recent headlines (title, link, date) sourced from Google
@@ -59,9 +73,3 @@ News RSS. Because RSS is not CORS-accessible from the browser, the Action
 fetches and parses it server-side and commits `news.json`; the dashboard reads
 that static file. Refreshed once daily, not real-time.
 _Avoid_: feed, articles, headlines (as the canonical noun)
-
-**Watchlist**:
-The user's persisted client-side selection (LocalStorage via Zustand) that
-filters which Ticker Config entries the dashboard displays. Purely a UI view
-preference — it does NOT affect which tickers the notification covers.
-_Avoid_: favorites, portfolio, holdings

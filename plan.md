@@ -1,7 +1,7 @@
-# 📊 Project Plan: Premium Curated Stock Dashboard with LINE Daily Notification
+# 📊 Project Plan: Premium Curated Stock Dashboard with LINE Monthly Notification
 
 ## 1. Project Overview
-สร้างระบบ FinTech Dashboard ยุคใหม่ (Modern Dark Theme) สำหรับวิเคราะห์สินทรัพย์ 4 ตัว (VOO, SCHD, QQQM, SNDK) โดยเป็นโปรเจกต์ **Pure Frontend 100% (ไม่มี Backend Server) แต่มีระบบยิง LINE Notification แจ้งเตือนจุดเข้าซื้อ Smart DCA รายวันอัตโนมัติ** โดยใช้โควตาฟรีของ LINE Messaging API ร่วมกับ GitHub Actions ในการตั้งเวลารันสคริปต์ตอนเช้า (เวลาไทย)
+สร้างระบบ FinTech Dashboard ยุคใหม่ (Modern Dark Theme) สำหรับวิเคราะห์สินทรัพย์ 4 ตัว (VOO, SCHD, QQQM, SNDK) โดยเป็นโปรเจกต์ **Pure Frontend 100% (ไม่มี Backend Server) แต่มีระบบยิง LINE Notification แจ้งเตือนจุดเข้าซื้อ Smart DCA รายเดือนอัตโนมัติ** (ผู้ใช้ DCA เดือนละครั้ง) โดยใช้โควตาฟรีของ LINE Messaging API ร่วมกับ GitHub Actions — รันรีเฟรชข้อมูลรายวันแต่ยิง LINE เดือนละครั้ง
 
 > 📖 ศัพท์เฉพาะทั้งหมดนิยามไว้ใน [`CONTEXT.md`](./CONTEXT.md) และเหตุผลเชิงสถาปัตยกรรมอยู่ใน [`docs/adr/`](./docs/adr/)
 
@@ -10,26 +10,25 @@
 ## 2. Technical Constraints & Coding Standards
 *   **Frontend Framework:** React 18+ (Vite + TypeScript)
 *   **Styling:** Tailwind CSS + UI components (Slate/Zinc Dark Mode, Mobile-First Layout)
-*   **Functions:** **Arrow Functions เท่านั้น** ในการประกาศ Components, Hooks, Stores, และ Automation Scripts ทุกชนิด (ห้ามใช้คำสำคัญ `function`)
-*   **State Management:** **Zustand** + `persist` (บันทึกหุ้น Favorite ลงใน LocalStorage — เป็นแค่ตัวกรองการแสดงผลฝั่ง UI ไม่เกี่ยวกับ Notification)
+*   **Functions:** **Arrow Functions เท่านั้น** ในการประกาศ Components, Hooks, และ Automation Scripts ทุกชนิด (ห้ามใช้คำสำคัญ `function`)
+*   **UI:** Single-page **Mobile-First** dashboard (ไม่มี router/state library — ตัด Watchlist/Favorite ออกแล้ว)
 *   **Data & Charting:** **TanStack Query v5** ร่วมกับ **TradingView Lightweight Charts** สำหรับวาดกราฟราคา EOD (default 1Y + ตัวเลือกช่วง 3M/6M/1Y/5Y)
 *   **Price Source:** **Yahoo Finance chart API** (keyless) ดึงฝั่ง server ใน GitHub Action แล้ว commit เป็น `public/prices.json` — Dashboard อ่าน snapshot static ตัวเดียวกับที่ใช้คำนวณ LINE signal (Stooq ถูกทิ้งเพราะติด anti-bot, ดู ADR-0004); Mock Data ใช้เป็น dev fallback เท่านั้น
-*   **Notification:** **LINE Messaging API** (Channel Access Token & User ID เก็บใน GitHub Secrets) ส่งแบบ **push หา userId เดียว** สรุปผลรายวัน
+*   **Notification:** **LINE Messaging API** (Channel Access Token & User ID เก็บใน GitHub Secrets) ส่งแบบ **push หา userId เดียว** สรุปผลรายเดือน
 
 ---
 
 ## 3. Directory Structure
 ```text
 src/
-├── components/   # UI Components (Sidebar, StockCard, AnalyticsChart, NewsCard)
-├── hooks/        # Custom React Hooks ครอบ TanStack Query (useStockAnalytics)
-├── pages/        # หน้าหลักของแอป (Dashboard, Watchlist)
+├── components/   # UI Components (Header, StockCard, AnalyticsChart, NewsCard, MultiplierBadge)
+├── hooks/        # Custom React Hooks ครอบ TanStack Query (useStockAnalytics, useNews)
+├── pages/        # หน้าหลักของแอป (Dashboard)
 ├── services/     # yahoo parse + prices.json/news reader + Mock (dev fallback)
-├── stores/       # Zustand State Stores (useWatchlistStore)
 ├── styles/       # ไฟล์ CSS Global (index.css)
 └── utils/        # dcaCalculator.ts สำหรับคำนวณ Buy Multiplier (Arrow Function)
 config/
-└── tickers.json  # Source of truth: [{ symbol, name, baseTHB }] — อ่านร่วมกันทั้ง UI และ Action
+└── tickers.json  # Source of truth: [{ symbol, name, mode, baseTHB? }] — อ่านร่วมกันทั้ง UI และ Action
 public/
 ├── prices.json   # Prices Snapshot: ~5y EOD ต่อ ticker (Action เขียนทับรายวัน)
 ├── news.json     # News Digest ต่อ ticker (Action เขียนทับรายวัน, frontend อ่าน static)
@@ -59,28 +58,40 @@ public/
 ---
 
 ## 5. Daily Notification Design
-*   **ตารางเวลา:** cron `0 0 * * *` (00:00 UTC ≈ 07:00 เวลาไทย) — US ปิดตี 3–4 ไทย ข้อมูล EOD จึงสดเสมอ ไม่ว่า DST จะเลื่อน
+*   **ตารางเวลา:** cron `0 0 * * *` รัน**ทุกวัน** (00:00 UTC ≈ 07:00 ไทย) เพื่อรีเฟรช `prices.json`/`news.json` ให้ dashboard — แต่ **ยิง LINE เดือนละครั้ง** (ดู ADR-0005)
+*   **โหมดต่อ ticker (ADR-0006):** `dca` = Smart DCA รายเดือน (VOO/SCHD/QQQM), `daily` = ติดตามรายวัน (SNDK)
+*   **ยิงรายเดือน (dca):** ส่งครั้งแรกของเดือนตั้งแต่วันที่ `BUY_DAY_OF_MONTH` (=1) โดยเทียบ `lastSentMonth` (`baseTHB` = งบต่อเดือนต่อตัว) — ถ้าวันที่ 1 ตรงวันหยุดก็ยังส่งด้วยราคาปิดล่าสุด และรันรายวันทำให้ resilient
+*   **ยิงรายวัน (daily):** ส่ง SNDK ขึ้น/ลง % เทียบเมื่อวาน ทุกครั้งที่มี EOD ใหม่ (เทียบ `lastDailyDate` → auto ข้ามเสาร์อาทิตย์/วันหยุด) — เป็นคนละข้อความกับ DCA รายเดือน
 *   **ราคา (CORS workaround):** Action ดึง **Yahoo Finance chart API** ฝั่ง server แล้ว commit `public/prices.json`; frontend อ่าน snapshot static ตัวเดียวกับที่ใช้คำนวณ signal (ดู ADR-0004)
-*   **ข้ามวันหยุด:** ถ้าวันที่ EOD ล่าสุดเท่ากับใน `.state/last-sent.json` (ไม่มีราคาปิดใหม่) → **ไม่ส่ง** (กันโควตา LINE ฟรี + กันตัวเลขซ้ำ) → ครอบทั้งเสาร์อาทิตย์และวันหยุดตลาดโดยไม่ต้องมีปฏิทิน
 *   **Failure ต้องดัง:** error ที่ไม่คาดคิด → exit non-zero ให้ GitHub ส่งอีเมลแจ้ง (เพราะความเงียบเป็นสภาวะปกติ แยกไม่ออกจาก outage) — ถ้าดึงได้บางตัว ให้ส่งเท่าที่ได้พร้อมระบุตัวที่พลาด
+*   **ทดสอบ:** `FORCE_SEND=1` ข้าม gate รายเดือน (manual `workflow_dispatch` ตั้งให้อัตโนมัติ), `DRY_RUN=1` พิมพ์ข้อความโดยไม่ส่ง/ไม่แตะ state
 *   **ข่าว (CORS workaround):** RSS เรียกจาก browser ตรงๆ ไม่ได้ → Action ดึง **Google News RSS ต่อ ticker** ฝั่ง server แล้ว commit `public/news.json` ให้ frontend อ่านเป็น static
 
-### รูปแบบข้อความ (1 ข้อความ/วัน รวมทุก ticker)
+### รูปแบบข้อความ
+**รายเดือน (dca) — 1 ข้อความ/เดือน**
 ```
-📊 Smart DCA — 2 ก.ค. 2026 (อิงราคาปิด 1 ก.ค.)
+📊 Smart DCA รายเดือน — กรกฎาคม 2026
+(อิงราคาปิดล่าสุด 1 ก.ค. 2026)
 
-🔴 VOO — ฿2,000 (2x)
-   $512.30 · ↓7.2% จาก 52wk high
+🟢 VOO — ฿2,000 (1x)
+   $685.46 · ↓1.8% จาก 52wk high
 🟢 SCHD — ฿1,000 (1x)
-   $27.80 · ↓1.1%
-🟠 QQQM — ฿3,000 (3x)
-   $198.40 · ↓12.5%
-🟢 SNDK — ฿1,000 (1x)
-   $44.10 · ↓3.0%
+   $31.85 · ↓3.0% จาก 52wk high
+🟢 QQQM — ฿1,000 (1x)
+   $298.61 · ↓2.8% จาก 52wk high
 
-รวมวันนี้: ฿7,000
+รวมเดือนนี้: ฿4,000
 ```
 (สีวงกลมแปรผันตาม multiplier: เขียว 1x → แดงเข้ม 5x)
+
+**รายวัน (daily) — 1 ข้อความ/วันทำการ**
+```
+📈 ติดตามรายวัน — 1 ก.ค. 2026
+
+🔴 SNDK — $2,032.22
+   ↓10.62% (-$241.51) จากเมื่อวาน
+```
+(🟢 ขึ้น / 🔴 ลง เทียบราคาปิดวันก่อนหน้า)
 
 ---
 

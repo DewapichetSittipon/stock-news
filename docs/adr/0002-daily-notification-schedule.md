@@ -1,4 +1,13 @@
+---
+status: send-cadence superseded by ADR-0005
+---
+
 # Daily notification: run at 00:00 UTC, skip days with no new EOD close
+
+> **Send cadence superseded by [ADR-0005](./0005-monthly-notification-cadence.md).**
+> The user DCAs monthly, so the push is now once a month, not per new EOD close.
+> The 00:00 UTC daily run and the committed-state mechanism below still apply
+> (the workflow runs daily to refresh the dashboard's data).
 
 The GitHub Action runs on cron at **00:00 UTC** (≈07:00 Thailand). US markets
 close 4pm ET (≈03:00–04:00 Thailand), so Stooq's fresh EOD close is always

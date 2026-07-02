@@ -23,21 +23,30 @@ npm run build
 Action:
 
 ```json
-[{ "symbol": "VOO", "name": "Vanguard S&P 500 ETF", "baseTHB": 2000 }]
+[
+  { "symbol": "VOO", "name": "Vanguard S&P 500 ETF", "mode": "dca", "baseTHB": 2000 },
+  { "symbol": "SNDK", "name": "SanDisk Corporation", "mode": "daily" }
+]
 ```
 
-The drawdown → multiplier bands live in `src/utils/dcaCalculator.ts` (not config).
+Each ticker has a `mode`: `dca` (monthly Smart DCA buy, needs `baseTHB`) or
+`daily` (tracked for day-over-day movement, no buy recommendation). The
+drawdown → multiplier bands live in `src/utils/dcaCalculator.ts` (not config).
 
-## Daily LINE notification
+## LINE notifications
 
-The Action (`.github/workflows/daily-line-noti.yml`) runs at 00:00 UTC
-(~07:00 Bangkok):
+The Action (`.github/workflows/daily-line-noti.yml`) runs daily at 00:00 UTC
+(~07:00 Bangkok) and refreshes `public/prices.json` + `public/news.json` for the
+dashboard. It pushes LINE in two independent streams (state in `.state/last-sent.json`):
 
-1. Fetches EOD prices from Stooq and computes each ticker's Buy Multiplier.
-2. Fetches Google News RSS per ticker and commits `public/news.json`.
-3. Skips sending if there is no new EOD close since `.state/last-sent.json`
-   (covers weekends and US holidays without a calendar).
-4. Otherwise pushes one LINE message and commits the new state.
+- **`daily` tickers** — an up/down alert once per new EOD close (`lastDailyDate`),
+  auto-skipping weekends/holidays.
+- **`dca` tickers** — one Smart DCA message per month, on the first run on/after
+  the 1st (`lastSentMonth`).
+
+`baseTHB` is the **monthly** base buy per DCA ticker. Change the buy day via
+`BUY_DAY_OF_MONTH` in `scripts/dailyNoti.ts`. `FORCE_SEND=1` bypasses both gates;
+`DRY_RUN=1` prints without sending.
 
 ### Setup
 

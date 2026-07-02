@@ -3,18 +3,27 @@ export interface PricePoint {
   close: number;
 }
 
+// "dca"   → monthly Smart DCA buy recommendation
+// "daily" → tracked daily for up/down movement (not a DCA holding)
+export type TickerMode = 'dca' | 'daily';
+
 export interface TickerConfig {
   symbol: string;
   name: string;
-  baseTHB: number;
+  mode: TickerMode;
+  baseTHB?: number; // required for "dca", ignored for "daily"
 }
 
 export interface TickerAnalytics {
   symbol: string;
   name: string;
+  mode: TickerMode;
   baseTHB: number;
   latestDate: string;
   latestClose: number;
+  prevClose: number;
+  dailyChangeUsd: number;
+  dailyChangePct: number;
   high52: number;
   drawdownPct: number; // <= 0
   multiplier: number; // 1..5

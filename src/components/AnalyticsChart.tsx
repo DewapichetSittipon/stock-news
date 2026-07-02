@@ -60,7 +60,7 @@ export const AnalyticsChart = ({ history, color }: Props): JSX.Element => {
           <button
             key={range.label}
             onClick={() => setRangeDays(range.days)}
-            className={`rounded px-2 py-0.5 text-xs ${
+            className={`rounded px-3 py-1 text-xs ${
               rangeDays === range.days
                 ? 'bg-slate-700 text-white'
                 : 'text-slate-400 hover:text-slate-200'
@@ -70,7 +70,7 @@ export const AnalyticsChart = ({ history, color }: Props): JSX.Element => {
           </button>
         ))}
       </div>
-      <div ref={containerRef} className="h-60 w-full" />
+      <div ref={containerRef} className="h-48 w-full sm:h-60" />
     </div>
   );
 };

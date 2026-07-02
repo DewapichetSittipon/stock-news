@@ -28,20 +28,29 @@ export const analyzeTicker = (
   if (sorted.length === 0) throw new Error(`No price history for ${config.symbol}`);
 
   const latest = sorted[sorted.length - 1];
+  const prevClose = sorted.length >= 2 ? sorted[sorted.length - 2].close : latest.close;
+  const dailyChangeUsd = latest.close - prevClose;
+  const dailyChangePct = prevClose > 0 ? (dailyChangeUsd / prevClose) * 100 : 0;
+
   const high52 = compute52WeekHigh(sorted);
   const drawdownPct = computeDrawdownPct(latest.close, high52);
   const multiplier = multiplierForDrawdown(drawdownPct);
+  const baseTHB = config.baseTHB ?? 0;
 
   return {
     symbol: config.symbol,
     name: config.name,
-    baseTHB: config.baseTHB,
+    mode: config.mode,
+    baseTHB,
     latestDate: latest.date,
     latestClose: latest.close,
+    prevClose,
+    dailyChangeUsd,
+    dailyChangePct,
     high52,
     drawdownPct,
     multiplier,
-    recommendedTHB: config.baseTHB * multiplier,
+    recommendedTHB: baseTHB * multiplier,
     history: sorted,
   };
 };
