@@ -4,13 +4,14 @@ import type { LedgerEntry, TickerAnalytics } from '../types';
 interface Props {
   ledger: LedgerEntry[];
   analytics: TickerAnalytics[];
+  usdThb?: number | null;
 }
 
 interface Holding {
   symbol: string;
   invested: number;
-  units: number;
   value: number;
+  annualDividend: number;
   pl: number;
   plPct: number;
 }
@@ -18,45 +19,60 @@ interface Holding {
 const UP = '#10b981';
 const DOWN = '#ef4444';
 
-export const Portfolio = ({ ledger, analytics }: Props): JSX.Element | null => {
+export const Portfolio = ({ ledger, analytics, usdThb }: Props): JSX.Element | null => {
   if (ledger.length === 0) return null;
 
-  const priceOf = (symbol: string): number =>
-    analytics.find((item) => item.symbol === symbol)?.latestClose ?? 0;
+  const infoOf = (symbol: string): TickerAnalytics | undefined =>
+    analytics.find((item) => item.symbol === symbol);
 
-  const bySymbol = new Map<string, { invested: number; units: number }>();
+  // Value each buy with the currency leg included when the ledger recorded the
+  // FX at buy time: multiplying by (now / then) captures the THB gain/loss on
+  // the dollars held. Legacy entries (no fxRate) fall back to a factor of 1,
+  // i.e. the previous price-ratio valuation.
+  const bySymbol = new Map<string, Holding>();
   for (const entry of ledger) {
-    const acc = bySymbol.get(entry.symbol) ?? { invested: 0, units: 0 };
+    const info = infoOf(entry.symbol);
+    const price = info?.latestClose ?? 0;
+    const ttmDiv = info?.ttmDividend ?? 0;
+    const fxFactor = usdThb && entry.fxRate ? usdThb / entry.fxRate : 1;
+
+    const acc = bySymbol.get(entry.symbol) ?? {
+      symbol: entry.symbol,
+      invested: 0,
+      value: 0,
+      annualDividend: 0,
+      pl: 0,
+      plPct: 0,
+    };
     acc.invested += entry.amountTHB;
-    acc.units += entry.units;
+    acc.value += entry.units * price * fxFactor;
+    acc.annualDividend += entry.units * ttmDiv * fxFactor;
     bySymbol.set(entry.symbol, acc);
   }
 
-  const holdings: Holding[] = [...bySymbol.entries()].map(([symbol, acc]) => {
-    const value = acc.units * priceOf(symbol);
-    const pl = value - acc.invested;
-    return {
-      symbol,
-      invested: acc.invested,
-      units: acc.units,
-      value,
-      pl,
-      plPct: acc.invested > 0 ? (pl / acc.invested) * 100 : 0,
-    };
+  const holdings: Holding[] = [...bySymbol.values()].map((h) => {
+    const pl = h.value - h.invested;
+    return { ...h, pl, plPct: h.invested > 0 ? (pl / h.invested) * 100 : 0 };
   });
 
   const invested = holdings.reduce((sum, h) => sum + h.invested, 0);
   const value = holdings.reduce((sum, h) => sum + h.value, 0);
+  const annualDividend = holdings.reduce((sum, h) => sum + h.annualDividend, 0);
   const pl = value - invested;
   const plPct = invested > 0 ? (pl / invested) * 100 : 0;
   const plColor = pl >= 0 ? UP : DOWN;
+  const dividendYield = value > 0 ? (annualDividend / value) * 100 : 0;
+  const fxAware = ledger.some((entry) => entry.fxRate != null) && usdThb != null;
 
   return (
     <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-white sm:text-xl">พอร์ตของฉัน</h2>
-          <p className="text-xs text-slate-500">ลงทุนสะสม {formatTHB(invested)}</p>
+          <p className="text-xs text-slate-500">
+            ลงทุนสะสม {formatTHB(invested)}
+            {usdThb != null && ` · USD/THB ${usdThb.toFixed(2)}`}
+          </p>
         </div>
         <div className="text-right">
           <p className="text-xs uppercase tracking-wide text-slate-500">มูลค่าปัจจุบัน</p>
@@ -67,6 +83,15 @@ export const Portfolio = ({ ledger, analytics }: Props): JSX.Element | null => {
           </p>
         </div>
       </div>
+
+      {annualDividend > 0 && (
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-500/10 px-3 py-2">
+          <span className="text-xs text-emerald-200/80">ปันผลคาดการณ์/ปี</span>
+          <span className="text-sm font-semibold text-emerald-300">
+            {formatTHB(annualDividend)} ({dividendYield.toFixed(2)}%)
+          </span>
+        </div>
+      )}
 
       <div className="mt-3 divide-y divide-slate-800">
         {holdings.map((h) => (
@@ -86,7 +111,8 @@ export const Portfolio = ({ ledger, analytics }: Props): JSX.Element | null => {
       </div>
 
       <p className="mt-2 text-[11px] text-slate-600">
-        * มูลค่าเป็นบาทเทียบสัดส่วนราคา (ไม่รวมค่าเงิน/ปันผล)
+        * มูลค่าเป็นบาทเทียบสัดส่วนราคา
+        {fxAware ? ' รวมผลค่าเงินจากรายการที่บันทึกเรตไว้' : ' (ยังไม่รวมค่าเงิน)'} · ปันผลเป็นตัวเลขคาดการณ์
       </p>
     </div>
   );

@@ -12,8 +12,9 @@ All analytics are computed from EOD closes only — no intraday data.
 
 **Prices Snapshot**:
 The committed `public/prices.json` holding ~5y of EOD closes per ticker,
-regenerated daily by the Action. The browser reads it directly (no live API
-call), so the dashboard and the LINE signal share one source of truth. See
+regenerated daily by the Action. It also carries each ticker's dividend history
+and the current [[FX Rate]] (`usdThb`). The browser reads it directly (no live
+API call), so the dashboard and the LINE signal share one source of truth. See
 [[Ticker Config]] for what to track and docs/adr/0004 for why it is committed.
 _Avoid_: cache, price feed
 
@@ -69,10 +70,25 @@ _Avoid_: delta, movement
 
 **Ledger**:
 The committed `public/ledger.json` — an append-only record of each monthly DCA
-buy (`date, symbol, amountTHB, priceUSD, units`) written by the Action. The
-dashboard's Portfolio view aggregates it into invested / current value / P&L.
-Valuation is ฿-ratio only (see docs/adr/0007).
+buy (`date, symbol, amountTHB, priceUSD, units`, plus `fxRate` on entries
+written after FX tracking landed) by the Action. The dashboard's Portfolio view
+aggregates it into invested / current value / P&L. Valuation is ฿-ratio, and
+where an entry recorded its [[FX Rate]] the currency leg is folded in too;
+legacy entries fall back to ratio-only (see docs/adr/0007).
 _Avoid_: transactions, history, journal
+
+**Dividend Yield**:
+Trailing-twelve-month dividends per share divided by the latest EOD close, as a
+percent. Computed from the dividend history in the [[Prices Snapshot]]; shown on
+DCA cards and aggregated into the Portfolio's projected annual income.
+_Avoid_: distribution rate, payout
+
+**FX Rate**:
+The USD→THB rate (`THB=X`, baht per dollar) fetched with the daily snapshot and
+stored as `usdThb`. Displayed alongside the portfolio, used to show THB-
+equivalent prices, and recorded on each new [[Ledger]] entry so currency gains
+can be valued exactly later.
+_Avoid_: exchange rate (unqualified), conversion
 
 **News Digest**:
 A per-ticker list of recent headlines (title, link, date) sourced from Google

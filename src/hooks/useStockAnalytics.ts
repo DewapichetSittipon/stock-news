@@ -9,7 +9,9 @@ export const useStockAnalytics = () => {
   });
 
   return {
-    data: query.data ?? [],
+    data: query.data?.analytics ?? [],
+    generatedAt: query.data?.generatedAt ?? '',
+    usdThb: query.data?.usdThb ?? null,
     isLoading: query.isLoading,
     isError: query.isError,
   };

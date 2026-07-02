@@ -3,8 +3,14 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { XMLParser } from 'fast-xml-parser';
 import { analyzeTicker } from '../src/utils/dcaCalculator';
-import { parseYahooChart, yahooChartUrl } from '../src/services/yahoo';
+import {
+  parseUsdThb,
+  parseYahooChart,
+  parseYahooDividends,
+  yahooChartUrl,
+} from '../src/services/yahoo';
 import type {
+  DividendPoint,
   LedgerEntry,
   NewsDigest,
   NewsItem,
@@ -47,12 +53,14 @@ export interface Collected {
   analyses: TickerAnalytics[];
   failed: string[];
   history: Record<string, PricePoint[]>;
+  dividends: Record<string, DividendPoint[]>;
 }
 
 export const collectPrices = async (configs: TickerConfig[]): Promise<Collected> => {
   const analyses: TickerAnalytics[] = [];
   const failed: string[] = [];
   const history: Record<string, PricePoint[]> = {};
+  const dividends: Record<string, DividendPoint[]> = {};
 
   for (const config of configs) {
     try {
@@ -60,20 +68,46 @@ export const collectPrices = async (configs: TickerConfig[]): Promise<Collected>
         headers: { 'User-Agent': UA },
       });
       if (!response.ok) throw new Error(`Yahoo ${config.symbol} HTTP ${response.status}`);
-      const points = parseYahooChart(await response.json());
+      const json = await response.json();
+      const points = parseYahooChart(json);
       if (points.length === 0) throw new Error(`Yahoo ${config.symbol} returned no points`);
+      const divs = parseYahooDividends(json);
       history[config.symbol] = points;
-      analyses.push(analyzeTicker(config, points));
+      dividends[config.symbol] = divs;
+      analyses.push(analyzeTicker(config, points, divs));
     } catch (error) {
       console.error(`[price] ${config.symbol}`, error);
       failed.push(config.symbol);
     }
   }
-  return { analyses, failed, history };
+  return { analyses, failed, history, dividends };
 };
 
-export const writePricesFile = (history: Record<string, PricePoint[]>): void => {
-  const file: PricesFile = { generatedAt: new Date().toISOString(), data: history };
+// Latest USD→THB rate, best-effort (null if the fetch/parse fails).
+export const fetchUsdThb = async (): Promise<number | null> => {
+  try {
+    const response = await fetch(yahooChartUrl('THB=X', '5d'), {
+      headers: { 'User-Agent': UA },
+    });
+    if (!response.ok) throw new Error(`Yahoo THB=X HTTP ${response.status}`);
+    return parseUsdThb(await response.json());
+  } catch (error) {
+    console.error('[fx] THB=X', error);
+    return null;
+  }
+};
+
+export const writePricesFile = (
+  history: Record<string, PricePoint[]>,
+  dividends: Record<string, DividendPoint[]> = {},
+  usdThb: number | null = null,
+): void => {
+  const file: PricesFile = {
+    generatedAt: new Date().toISOString(),
+    data: history,
+    dividends,
+    ...(usdThb != null ? { usdThb } : {}),
+  };
   writeJson(PRICES_PATH, file);
 };
 

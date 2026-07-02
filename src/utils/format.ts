@@ -28,6 +28,31 @@ export const formatThaiDate = (iso: string): string => {
   });
 };
 
+// Full ISO timestamp (e.g. prices.json `generatedAt`) → Thai date + time.
+export const formatThaiDateTime = (iso: string): string => {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('th-TH-u-ca-gregory', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+// Current calendar month "YYYY-MM" in the user's DCA timezone (Bangkok), to
+// match when the Action records buys.
+export const bangkokMonth = (): string =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+  })
+    .format(new Date())
+    .slice(0, 7);
+
 export const formatThaiMonth = (iso: string): string => {
   const date = new Date(`${iso}T00:00:00`);
   return date.toLocaleDateString('th-TH-u-ca-gregory', {

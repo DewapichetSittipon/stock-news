@@ -3,6 +3,11 @@ export interface PricePoint {
   close: number;
 }
 
+export interface DividendPoint {
+  date: string; // ISO YYYY-MM-DD (ex-dividend date)
+  amount: number; // cash dividend per share, in USD
+}
+
 // "dca"   → monthly Smart DCA buy recommendation
 // "daily" → tracked daily for up/down movement (not a DCA holding)
 export type TickerMode = 'dca' | 'daily';
@@ -33,6 +38,8 @@ export interface TickerAnalytics {
   sma200: number;
   rsi14: number;
   ytdPct: number;
+  ttmDividend: number; // sum of dividends/share over the trailing 12 months (USD)
+  dividendYieldPct: number; // ttmDividend / latestClose * 100
   history: PricePoint[];
 }
 
@@ -47,6 +54,8 @@ export type NewsDigest = Record<string, NewsItem[]>;
 export interface PricesFile {
   generatedAt: string;
   data: Record<string, PricePoint[]>;
+  dividends?: Record<string, DividendPoint[]>;
+  usdThb?: number; // THB per 1 USD at generatedAt (for display + valuation)
 }
 
 export interface LedgerEntry {
@@ -55,4 +64,5 @@ export interface LedgerEntry {
   amountTHB: number;
   priceUSD: number;
   units: number; // amountTHB / priceUSD
+  fxRate?: number; // THB per 1 USD at buy time; absent on legacy entries
 }

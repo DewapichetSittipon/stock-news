@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ColorType, createChart } from 'lightweight-charts';
 import { smaSeries } from '../utils/indicators';
+import { multiplierSeries } from '../utils/dcaCalculator';
 import type { PricePoint } from '../types';
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
   color: string;
   high52?: number;
   low52?: number;
+  showMultiplier?: boolean; // overlay the historical Buy Multiplier strip (dca only)
 }
 
 const RANGES: { label: string; days: number }[] = [
@@ -20,7 +22,13 @@ const RANGES: { label: string; days: number }[] = [
 const SMA50_COLOR = '#f59e0b';
 const SMA200_COLOR = '#38bdf8';
 
-export const AnalyticsChart = ({ history, color, high52, low52 }: Props): JSX.Element => {
+export const AnalyticsChart = ({
+  history,
+  color,
+  high52,
+  low52,
+  showMultiplier,
+}: Props): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [rangeDays, setRangeDays] = useState(252);
 
@@ -70,9 +78,30 @@ export const AnalyticsChart = ({ history, color, high52, low52 }: Props): JSX.El
       area.createPriceLine({ price: low52, color: '#64748b', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '52w low' });
     }
 
+    // Buy Multiplier "heat strip" along the bottom: each bar is a full-height
+    // block coloured by what the signal would have said that day (1x green →
+    // 5x red). Drawn on an overlay price scale so it has no visible axis.
+    if (showMultiplier) {
+      area.priceScale().applyOptions({ scaleMargins: { top: 0.05, bottom: 0.18 } });
+      const strip = chart.addHistogramSeries({
+        priceScaleId: 'multiplier',
+        priceLineVisible: false,
+        lastValueVisible: false,
+        base: 0,
+      });
+      chart.priceScale('multiplier').applyOptions({
+        scaleMargins: { top: 0.9, bottom: 0 },
+      });
+      strip.setData(
+        multiplierSeries(history)
+          .filter((band) => band.time >= firstDate)
+          .map((band) => ({ time: band.time, value: 1, color: `${band.color}cc` })),
+      );
+    }
+
     chart.timeScale().fitContent();
     return () => chart.remove();
-  }, [history, rangeDays, color, high52, low52]);
+  }, [history, rangeDays, color, high52, low52, showMultiplier]);
 
   return (
     <div>
@@ -98,6 +127,16 @@ export const AnalyticsChart = ({ history, color, high52, low52 }: Props): JSX.El
         </div>
       </div>
       <div ref={containerRef} className="h-48 w-full sm:h-60" />
+      {showMultiplier && (
+        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-500">
+          <span>แถบล่าง = จังหวะซื้อในอดีต</span>
+          <span className="ml-auto flex items-center gap-1">
+            1x
+            <span className="inline-block h-2 w-4 rounded-sm bg-gradient-to-r from-emerald-500 via-orange-500 to-red-700" />
+            5x
+          </span>
+        </div>
+      )}
     </div>
   );
 };

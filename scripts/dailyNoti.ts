@@ -2,6 +2,7 @@ import {
   STATE_PATH,
   appendLedger,
   collectPrices,
+  fetchUsdThb,
   loadConfigs,
   readJson,
   refreshNews,
@@ -232,9 +233,10 @@ const main = async (): Promise<void> => {
   const configs = loadConfigs();
 
   // Prices — partial failures tolerated; total failure is loud (see ADR-0003).
-  const { analyses, failed, history } = await collectPrices(configs);
+  const { analyses, failed, history, dividends } = await collectPrices(configs);
   if (analyses.length === 0) throw new Error('All ticker price fetches failed');
-  writePricesFile(history);
+  const usdThb = await fetchUsdThb();
+  writePricesFile(history, dividends, usdThb);
 
   // News — best effort, refreshed daily so the dashboard stays current.
   await refreshNews(configs);
@@ -296,6 +298,9 @@ const main = async (): Promise<void> => {
           amountTHB: item.recommendedTHB,
           priceUSD: item.latestClose,
           units: item.recommendedTHB / item.latestClose,
+          // Record the FX at buy time so the portfolio can value the currency
+          // leg exactly later; omit if the rate fetch failed.
+          ...(usdThb != null ? { fxRate: usdThb } : {}),
         })),
       );
     }

@@ -1,9 +1,23 @@
-import type { PricePoint } from '../types';
+import type { DividendPoint, PricePoint } from '../types';
 
 export interface LinePoint {
   time: string;
   value: number;
 }
+
+// Sum of cash dividends per share paid in the 12 months up to `asOf` (ISO date).
+export const ttmDividendPerShare = (
+  dividends: DividendPoint[],
+  asOf: string,
+): number => {
+  if (dividends.length === 0) return 0;
+  const cutoff = new Date(`${asOf}T00:00:00`);
+  cutoff.setFullYear(cutoff.getFullYear() - 1);
+  const from = cutoff.toISOString().slice(0, 10);
+  return dividends
+    .filter((d) => d.date > from && d.date <= asOf)
+    .reduce((sum, d) => sum + d.amount, 0);
+};
 
 // Latest simple moving average over `period` closes (0 if not enough data).
 export const smaLatest = (closes: number[], period: number): number => {

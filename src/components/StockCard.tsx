@@ -12,6 +12,7 @@ import type { TickerAnalytics } from '../types';
 
 interface Props {
   analytics: TickerAnalytics;
+  usdThb?: number | null;
 }
 
 const UP = '#10b981';
@@ -34,11 +35,12 @@ const Stat = ({
   </div>
 );
 
-export const StockCard = ({ analytics }: Props): JSX.Element => {
+export const StockCard = ({ analytics, usdThb }: Props): JSX.Element => {
   const isDaily = analytics.mode === 'daily';
   const meta = multiplierMeta(analytics.multiplier);
   const changeColor = analytics.dailyChangePct >= 0 ? UP : DOWN;
   const accent = isDaily ? changeColor : meta.hex;
+  const priceTHB = usdThb ? analytics.latestClose * usdThb : null;
 
   const rsiColor =
     analytics.rsi14 < 30 ? UP : analytics.rsi14 > 70 ? DOWN : '#e2e8f0';
@@ -63,6 +65,9 @@ export const StockCard = ({ analytics }: Props): JSX.Element => {
           <p className="text-2xl font-semibold text-white">
             {formatUSD(analytics.latestClose)}
           </p>
+          {priceTHB !== null && (
+            <p className="text-xs text-slate-500">≈ {formatTHB(priceTHB)}</p>
+          )}
           {isDaily ? (
             <p className="text-sm font-medium" style={{ color: changeColor }}>
               {formatSignedPct(analytics.dailyChangePct)} (
@@ -105,10 +110,18 @@ export const StockCard = ({ analytics }: Props): JSX.Element => {
           value={analytics.sma200 > 0 ? (aboveSma200 ? 'เหนือ' : 'ใต้') : '—'}
           color={analytics.sma200 > 0 ? (aboveSma200 ? UP : DOWN) : undefined}
         />
-        <Stat
-          label="52wk low"
-          value={Number.isFinite(analytics.low52) ? formatUSD(analytics.low52) : '—'}
-        />
+        {!isDaily && analytics.dividendYieldPct > 0 ? (
+          <Stat
+            label="ปันผล"
+            value={`${analytics.dividendYieldPct.toFixed(2)}%`}
+            color="#34d399"
+          />
+        ) : (
+          <Stat
+            label="52wk low"
+            value={Number.isFinite(analytics.low52) ? formatUSD(analytics.low52) : '—'}
+          />
+        )}
       </div>
 
       <div className="mt-4">
@@ -117,6 +130,7 @@ export const StockCard = ({ analytics }: Props): JSX.Element => {
           color={accent}
           high52={analytics.high52}
           low52={analytics.low52}
+          showMultiplier={!isDaily}
         />
       </div>
     </div>
