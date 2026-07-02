@@ -21,23 +21,25 @@
 ## 3. Directory Structure
 ```text
 src/
-├── components/   # UI Components (Header, StockCard, AnalyticsChart, NewsCard, MultiplierBadge)
-├── hooks/        # Custom React Hooks ครอบ TanStack Query (useStockAnalytics, useNews)
-├── pages/        # หน้าหลักของแอป (Dashboard)
-├── services/     # yahoo parse + prices.json/news reader + Mock (dev fallback)
+├── components/   # Header, StockCard, AnalyticsChart(+SMA/52wk overlay), NewsCard, MultiplierBadge, Portfolio
+├── hooks/        # ครอบ TanStack Query (useStockAnalytics, useNews, useLedger)
+├── pages/        # Dashboard, Backtest (แท็บสลับใน App)
+├── services/     # yahoo parse + prices/news/ledger reader + Mock (dev fallback)
 ├── styles/       # ไฟล์ CSS Global (index.css)
-└── utils/        # dcaCalculator.ts สำหรับคำนวณ Buy Multiplier (Arrow Function)
+└── utils/        # dcaCalculator, indicators (SMA/RSI/YTD), backtest, format, multiplier
 config/
 └── tickers.json  # Source of truth: [{ symbol, name, mode, baseTHB? }] — อ่านร่วมกันทั้ง UI และ Action
 public/
 ├── prices.json   # Prices Snapshot: ~5y EOD ต่อ ticker (Action เขียนทับรายวัน)
-├── news.json     # News Digest ต่อ ticker (Action เขียนทับรายวัน, frontend อ่าน static)
+├── news.json     # News Digest ต่อ ticker
+├── ledger.json   # Ledger: บันทึกการซื้อ DCA รายเดือน (Action append) → Portfolio
 └── ...
 .state/
-└── last-sent.json # วันที่ EOD ล่าสุดที่ส่ง LINE ไปแล้ว (Action commit กลับ เพื่อกันส่งซ้ำ)
+└── last-sent.json # lastSentMonth / lastDailyDate / dipAlerts (Action commit กลับ กันส่งซ้ำ)
 .github/
 └── workflows/
-    └── daily-line-noti.yml  # GitHub Actions: รันเช้าไทย ดึงราคา/ข่าว คำนวณ ส่ง LINE
+    ├── daily-line-noti.yml  # รันทุกวัน: ดึงราคา/ข่าว, ส่ง LINE (daily/monthly/dip), commit ข้อมูล
+    └── deploy-pages.yml      # build + deploy เว็บขึ้น GitHub Pages
 ```
 
 ---
@@ -62,6 +64,8 @@ public/
 *   **โหมดต่อ ticker (ADR-0006):** `dca` = Smart DCA รายเดือน (VOO/SCHD/QQQM), `daily` = ติดตามรายวัน (SNDK)
 *   **ยิงรายเดือน (dca):** ส่งครั้งแรกของเดือนตั้งแต่วันที่ `BUY_DAY_OF_MONTH` (=1) โดยเทียบ `lastSentMonth` (`baseTHB` = งบต่อเดือนต่อตัว) — ถ้าวันที่ 1 ตรงวันหยุดก็ยังส่งด้วยราคาปิดล่าสุด และรันรายวันทำให้ resilient
 *   **ยิงรายวัน (daily):** ส่ง SNDK ขึ้น/ลง % เทียบเมื่อวาน ทุกครั้งที่มี EOD ใหม่ (เทียบ `lastDailyDate` → auto ข้ามเสาร์อาทิตย์/วันหยุด) — เป็นคนละข้อความกับ DCA รายเดือน
+*   **Dip alert:** ถ้าตัว DCA ย่อ ≤ `DIP_THRESHOLD` (-10%) กลางเดือน → เตือนให้ซื้อเพิ่ม (ครั้งเดียว/ตัว/เดือน, เก็บ `dipAlerts`)
+*   **รูปแบบ:** ทุกข้อความเป็น **LINE Flex Message** (การ์ดมีสีตาม multiplier) โดย `altText` เป็น text ธรรมดาไว้ fallback
 *   **ราคา (CORS workaround):** Action ดึง **Yahoo Finance chart API** ฝั่ง server แล้ว commit `public/prices.json`; frontend อ่าน snapshot static ตัวเดียวกับที่ใช้คำนวณ signal (ดู ADR-0004)
 *   **Failure ต้องดัง:** error ที่ไม่คาดคิด → exit non-zero ให้ GitHub ส่งอีเมลแจ้ง (เพราะความเงียบเป็นสภาวะปกติ แยกไม่ออกจาก outage) — ถ้าดึงได้บางตัว ให้ส่งเท่าที่ได้พร้อมระบุตัวที่พลาด
 *   **ทดสอบ:** `FORCE_SEND=1` ข้าม gate รายเดือน (manual `workflow_dispatch` ตั้งให้อัตโนมัติ), `DRY_RUN=1` พิมพ์ข้อความโดยไม่ส่ง/ไม่แตะ state

@@ -67,6 +67,13 @@ and dollar amount. Shown on the dashboard and pushed to LINE once per new EOD
 close. Distinct from Drawdown (which is vs the 52-Week High).
 _Avoid_: delta, movement
 
+**Ledger**:
+The committed `public/ledger.json` — an append-only record of each monthly DCA
+buy (`date, symbol, amountTHB, priceUSD, units`) written by the Action. The
+dashboard's Portfolio view aggregates it into invested / current value / P&L.
+Valuation is ฿-ratio only (see docs/adr/0007).
+_Avoid_: transactions, history, journal
+
 **News Digest**:
 A per-ticker list of recent headlines (title, link, date) sourced from Google
 News RSS. Because RSS is not CORS-accessible from the browser, the Action

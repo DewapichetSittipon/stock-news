@@ -7,6 +7,15 @@ LINE notification recommending how aggressively to buy each, using a
 drawdown-driven **Smart DCA** strategy (monthly), plus a daily up/down alert for
 `daily`-mode tickers.
 
+**Features**
+
+- Smart DCA buy multiplier (drawdown vs 52-week high) — monthly LINE + dashboard.
+- Daily up/down tracking for `daily`-mode tickers, and a mid-month dip alert.
+- **Backtest** tab: Smart DCA vs plain DCA over the full price history.
+- **Portfolio**: cost basis + P&L from the committed ledger of monthly buys.
+- Per-card analytics: SMA 50/200 overlay, RSI, YTD, 52-week high/low.
+- LINE **Flex** messages; auto-deploy to GitHub Pages.
+
 - Design & decisions: [`plan.md`](./plan.md), [`CONTEXT.md`](./CONTEXT.md), [`docs/adr/`](./docs/adr)
 - No backend. Prices come from Stooq (keyless EOD). The daily signal + news run
   in a GitHub Action.

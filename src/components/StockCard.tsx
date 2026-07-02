@@ -17,11 +17,32 @@ interface Props {
 const UP = '#10b981';
 const DOWN = '#ef4444';
 
+const Stat = ({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}): JSX.Element => (
+  <div className="rounded-lg bg-slate-800/50 px-2.5 py-1.5">
+    <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
+    <p className="text-sm font-semibold" style={{ color: color ?? '#e2e8f0' }}>
+      {value}
+    </p>
+  </div>
+);
+
 export const StockCard = ({ analytics }: Props): JSX.Element => {
   const isDaily = analytics.mode === 'daily';
   const meta = multiplierMeta(analytics.multiplier);
   const changeColor = analytics.dailyChangePct >= 0 ? UP : DOWN;
   const accent = isDaily ? changeColor : meta.hex;
+
+  const rsiColor =
+    analytics.rsi14 < 30 ? UP : analytics.rsi14 > 70 ? DOWN : '#e2e8f0';
+  const aboveSma200 = analytics.sma200 > 0 && analytics.latestClose >= analytics.sma200;
 
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg sm:p-5">
@@ -72,8 +93,31 @@ export const StockCard = ({ analytics }: Props): JSX.Element => {
         </div>
       </div>
 
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Stat label="RSI 14" value={analytics.rsi14.toFixed(0)} color={rsiColor} />
+        <Stat
+          label="YTD"
+          value={formatSignedPct(analytics.ytdPct)}
+          color={analytics.ytdPct >= 0 ? UP : DOWN}
+        />
+        <Stat
+          label="vs 200D"
+          value={analytics.sma200 > 0 ? (aboveSma200 ? 'เหนือ' : 'ใต้') : '—'}
+          color={analytics.sma200 > 0 ? (aboveSma200 ? UP : DOWN) : undefined}
+        />
+        <Stat
+          label="52wk low"
+          value={Number.isFinite(analytics.low52) ? formatUSD(analytics.low52) : '—'}
+        />
+      </div>
+
       <div className="mt-4">
-        <AnalyticsChart history={analytics.history} color={accent} />
+        <AnalyticsChart
+          history={analytics.history}
+          color={accent}
+          high52={analytics.high52}
+          low52={analytics.low52}
+        />
       </div>
     </div>
   );

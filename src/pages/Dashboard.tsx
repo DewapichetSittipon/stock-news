@@ -1,5 +1,7 @@
 import { NewsCard } from '../components/NewsCard';
+import { Portfolio } from '../components/Portfolio';
 import { StockCard } from '../components/StockCard';
+import { useLedger } from '../hooks/useLedger';
 import { useNews } from '../hooks/useNews';
 import { useStockAnalytics } from '../hooks/useStockAnalytics';
 import { formatTHB, formatThaiDate } from '../utils/format';
@@ -7,6 +9,7 @@ import { formatTHB, formatThaiDate } from '../utils/format';
 export const Dashboard = (): JSX.Element => {
   const { data, isLoading } = useStockAnalytics();
   const news = useNews();
+  const ledger = useLedger();
 
   const dcaData = data.filter((item) => item.mode === 'dca');
   const dailyData = data.filter((item) => item.mode === 'daily');
@@ -15,6 +18,8 @@ export const Dashboard = (): JSX.Element => {
 
   return (
     <div className="px-4 py-5 sm:px-6">
+      <Portfolio ledger={ledger.data ?? []} analytics={data} />
+
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-white sm:text-2xl">แนะนำเดือนนี้</h2>

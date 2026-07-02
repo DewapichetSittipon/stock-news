@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { ColorType, createChart } from 'lightweight-charts';
+import { smaSeries } from '../utils/indicators';
 import type { PricePoint } from '../types';
 
 interface Props {
   history: PricePoint[];
   color: string;
+  high52?: number;
+  low52?: number;
 }
 
 const RANGES: { label: string; days: number }[] = [
@@ -14,7 +17,10 @@ const RANGES: { label: string; days: number }[] = [
   { label: '5Y', days: 1260 },
 ];
 
-export const AnalyticsChart = ({ history, color }: Props): JSX.Element => {
+const SMA50_COLOR = '#f59e0b';
+const SMA200_COLOR = '#38bdf8';
+
+export const AnalyticsChart = ({ history, color, high52, low52 }: Props): JSX.Element => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [rangeDays, setRangeDays] = useState(252);
 
@@ -36,39 +42,60 @@ export const AnalyticsChart = ({ history, color }: Props): JSX.Element => {
       autoSize: true,
     });
 
-    const series = chart.addAreaSeries({
+    const sliced = history.slice(-rangeDays);
+    const firstDate = sliced.length > 0 ? sliced[0].date : '';
+
+    const area = chart.addAreaSeries({
       lineColor: color,
       topColor: `${color}55`,
       bottomColor: `${color}05`,
       lineWidth: 2,
       priceLineVisible: false,
     });
-    series.setData(
-      history
-        .slice(-rangeDays)
-        .map((point) => ({ time: point.date, value: point.close })),
-    );
-    chart.timeScale().fitContent();
+    area.setData(sliced.map((point) => ({ time: point.date, value: point.close })));
 
+    // Moving-average overlays (computed on full history, clipped to the range).
+    const addSma = (period: number, lineColor: string): void => {
+      if (history.length < period) return;
+      const series = chart.addLineSeries({ color: lineColor, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+      series.setData(smaSeries(history, period).filter((point) => point.time >= firstDate));
+    };
+    addSma(50, SMA50_COLOR);
+    addSma(200, SMA200_COLOR);
+
+    if (high52) {
+      area.createPriceLine({ price: high52, color: '#64748b', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '52w high' });
+    }
+    if (low52 && Number.isFinite(low52)) {
+      area.createPriceLine({ price: low52, color: '#64748b', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '52w low' });
+    }
+
+    chart.timeScale().fitContent();
     return () => chart.remove();
-  }, [history, rangeDays, color]);
+  }, [history, rangeDays, color, high52, low52]);
 
   return (
     <div>
-      <div className="mb-2 flex gap-1">
-        {RANGES.map((range) => (
-          <button
-            key={range.label}
-            onClick={() => setRangeDays(range.days)}
-            className={`rounded px-3 py-1 text-xs ${
-              rangeDays === range.days
-                ? 'bg-slate-700 text-white'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {range.label}
-          </button>
-        ))}
+      <div className="mb-2 flex items-center gap-3">
+        <div className="flex gap-1">
+          {RANGES.map((range) => (
+            <button
+              key={range.label}
+              onClick={() => setRangeDays(range.days)}
+              className={`rounded px-3 py-1 text-xs ${
+                rangeDays === range.days
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex gap-2 text-[10px] text-slate-500">
+          <span style={{ color: SMA50_COLOR }}>— 50D</span>
+          <span style={{ color: SMA200_COLOR }}>— 200D</span>
+        </div>
       </div>
       <div ref={containerRef} className="h-48 w-full sm:h-60" />
     </div>

@@ -25,9 +25,14 @@ export interface TickerAnalytics {
   dailyChangeUsd: number;
   dailyChangePct: number;
   high52: number;
+  low52: number;
   drawdownPct: number; // <= 0
   multiplier: number; // 1..5
   recommendedTHB: number;
+  sma50: number;
+  sma200: number;
+  rsi14: number;
+  ytdPct: number;
   history: PricePoint[];
 }
 
@@ -42,4 +47,12 @@ export type NewsDigest = Record<string, NewsItem[]>;
 export interface PricesFile {
   generatedAt: string;
   data: Record<string, PricePoint[]>;
+}
+
+export interface LedgerEntry {
+  date: string; // ISO buy date
+  symbol: string;
+  amountTHB: number;
+  priceUSD: number;
+  units: number; // amountTHB / priceUSD
 }

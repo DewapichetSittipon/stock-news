@@ -5,6 +5,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { analyzeTicker } from '../src/utils/dcaCalculator';
 import { parseYahooChart, yahooChartUrl } from '../src/services/yahoo';
 import type {
+  LedgerEntry,
   NewsDigest,
   NewsItem,
   PricePoint,
@@ -17,6 +18,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const CONFIG_PATH = resolve(ROOT, 'config/tickers.json');
 export const PRICES_PATH = resolve(ROOT, 'public/prices.json');
 export const NEWS_PATH = resolve(ROOT, 'public/news.json');
+export const LEDGER_PATH = resolve(ROOT, 'public/ledger.json');
 export const STATE_PATH = resolve(ROOT, '.state/last-sent.json');
 
 // Browser-like UA — Yahoo throttles the default Node fetch agent.
@@ -100,4 +102,14 @@ export const refreshNews = async (configs: TickerConfig[]): Promise<void> => {
     }
   }
   writeJson(NEWS_PATH, digest);
+};
+
+// Append monthly buys to the ledger, skipping any (date, symbol) already there
+// so re-runs / manual FORCE_SEND on the same day don't create duplicates.
+export const appendLedger = (entries: LedgerEntry[]): void => {
+  const ledger = readJson<LedgerEntry[]>(LEDGER_PATH, []);
+  const seen = new Set(ledger.map((entry) => `${entry.date}|${entry.symbol}`));
+  const fresh = entries.filter((entry) => !seen.has(`${entry.date}|${entry.symbol}`));
+  if (fresh.length === 0) return;
+  writeJson(LEDGER_PATH, [...ledger, ...fresh]);
 };

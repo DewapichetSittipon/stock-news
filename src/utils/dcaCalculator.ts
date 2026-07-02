@@ -1,4 +1,10 @@
 import type { PricePoint, TickerAnalytics, TickerConfig } from '../types';
+import {
+  low52Week,
+  rsiLatest,
+  smaLatest,
+  ytdReturnPct,
+} from './indicators';
 
 export const TRADING_DAYS_PER_YEAR = 252;
 
@@ -32,6 +38,7 @@ export const analyzeTicker = (
   const dailyChangeUsd = latest.close - prevClose;
   const dailyChangePct = prevClose > 0 ? (dailyChangeUsd / prevClose) * 100 : 0;
 
+  const closes = sorted.map((point) => point.close);
   const high52 = compute52WeekHigh(sorted);
   const drawdownPct = computeDrawdownPct(latest.close, high52);
   const multiplier = multiplierForDrawdown(drawdownPct);
@@ -48,9 +55,14 @@ export const analyzeTicker = (
     dailyChangeUsd,
     dailyChangePct,
     high52,
+    low52: low52Week(sorted),
     drawdownPct,
     multiplier,
     recommendedTHB: baseTHB * multiplier,
+    sma50: smaLatest(closes, 50),
+    sma200: smaLatest(closes, 200),
+    rsi14: rsiLatest(closes),
+    ytdPct: ytdReturnPct(sorted),
     history: sorted,
   };
 };

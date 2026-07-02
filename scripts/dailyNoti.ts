@@ -1,5 +1,6 @@
 import {
   STATE_PATH,
+  appendLedger,
   collectPrices,
   loadConfigs,
   readJson,
@@ -22,6 +23,9 @@ import type { TickerAnalytics } from '../src/types';
 // The user DCAs once a month, on this day (or the first run on/after it). See
 // docs/adr/0005.
 const BUY_DAY_OF_MONTH = 1;
+
+// A dca ticker at/below this drawdown triggers a mid-month "buy more" alert.
+const DIP_THRESHOLD = -10;
 
 // Current month ("YYYY-MM") and day-of-month in the user's timezone.
 const bangkokMonthDay = (): { month: string; day: number } => {
@@ -75,7 +79,137 @@ const buildDailyMessage = (
   return [`📈 ติดตามรายวัน — ${formatThaiDate(latestDate)}`, '', ...lines].join('\n');
 };
 
-const pushLine = async (message: string): Promise<void> => {
+// Mid-month opportunistic dip alert for dca tickers (drawdown <= threshold).
+const buildDipMessage = (analyses: TickerAnalytics[], latestDate: string): string => {
+  const lines = analyses.map((item) => {
+    const meta = multiplierMeta(item.multiplier);
+    return `${meta.emoji} ${item.symbol} — ${formatUSD(item.latestClose)} · ${formatDrawdown(item.drawdownPct)} (${meta.label})`;
+  });
+  return [
+    `⚠️ จังหวะซื้อเพิ่ม — ${formatThaiDate(latestDate)}`,
+    'ตัว DCA ต่อไปนี้ย่อลงแรง:',
+    '',
+    ...lines,
+  ].join('\n');
+};
+
+// --- LINE Flex builders (visual cards; altText reuses the plain text above) ---
+type Flex = Record<string, unknown>;
+const SEP: Flex = { type: 'separator', margin: 'md', color: '#334155' };
+
+const bubble = (altText: string, contents: Flex[]): Flex => ({
+  type: 'flex',
+  altText: altText.slice(0, 400),
+  contents: {
+    type: 'bubble',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#0f172a',
+      spacing: 'sm',
+      contents,
+    },
+  },
+});
+
+const heading = (title: string, subtitle: string): Flex[] => [
+  { type: 'text', text: title, weight: 'bold', size: 'lg', color: '#ffffff', wrap: true },
+  { type: 'text', text: subtitle, size: 'xs', color: '#94a3b8', wrap: true },
+];
+
+const twoLineRow = (
+  left: string,
+  right: string,
+  rightColor: string,
+  sub: string,
+): Flex => ({
+  type: 'box',
+  layout: 'vertical',
+  margin: 'md',
+  spacing: 'none',
+  contents: [
+    {
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        { type: 'text', text: left, size: 'sm', weight: 'bold', color: '#e2e8f0' },
+        { type: 'text', text: right, size: 'sm', align: 'end', weight: 'bold', color: rightColor },
+      ],
+    },
+    { type: 'text', text: sub, size: 'xxs', color: '#94a3b8', wrap: true },
+  ],
+});
+
+const dcaFlex = (
+  analyses: TickerAnalytics[],
+  failed: string[],
+  latestDate: string,
+): Flex => {
+  const total = analyses.reduce((sum, item) => sum + item.recommendedTHB, 0);
+  const contents: Flex[] = [
+    ...heading('📊 Smart DCA รายเดือน', `${formatThaiMonth(latestDate)} · อิงปิด ${formatThaiDate(latestDate)}`),
+    SEP,
+    ...analyses.map((item) => {
+      const meta = multiplierMeta(item.multiplier);
+      return twoLineRow(
+        `${meta.emoji} ${item.symbol}`,
+        `${formatTHB(item.recommendedTHB)} (${meta.label})`,
+        meta.hex,
+        `${formatUSD(item.latestClose)} · ${formatDrawdown(item.drawdownPct)} จาก 52wk high`,
+      );
+    }),
+    SEP,
+    {
+      type: 'box',
+      layout: 'horizontal',
+      margin: 'md',
+      contents: [
+        { type: 'text', text: 'รวมเดือนนี้', size: 'sm', color: '#94a3b8' },
+        { type: 'text', text: formatTHB(total), size: 'sm', align: 'end', weight: 'bold', color: '#34d399' },
+      ],
+    },
+  ];
+  if (failed.length > 0) {
+    contents.push({ type: 'text', text: `⚠️ พลาด: ${failed.join(', ')}`, size: 'xxs', color: '#f87171', margin: 'sm', wrap: true });
+  }
+  return bubble(buildMessage(analyses, failed, latestDate), contents);
+};
+
+const dailyFlex = (analyses: TickerAnalytics[], latestDate: string): Flex => {
+  const contents: Flex[] = [
+    ...heading('📈 ติดตามรายวัน', formatThaiDate(latestDate)),
+    SEP,
+    ...analyses.map((item) => {
+      const up = item.dailyChangePct >= 0;
+      return twoLineRow(
+        `${up ? '🟢' : '🔴'} ${item.symbol}`,
+        formatSignedPct(item.dailyChangePct),
+        up ? '#34d399' : '#f87171',
+        `${formatUSD(item.latestClose)} · ${formatSignedUSD(item.dailyChangeUsd)} จากเมื่อวาน`,
+      );
+    }),
+  ];
+  return bubble(buildDailyMessage(analyses, latestDate), contents);
+};
+
+const dipFlex = (analyses: TickerAnalytics[], latestDate: string): Flex => {
+  const contents: Flex[] = [
+    ...heading('⚠️ จังหวะซื้อเพิ่ม', `${formatThaiDate(latestDate)} · ตัว DCA ย่อลงแรง`),
+    SEP,
+    ...analyses.map((item) => {
+      const meta = multiplierMeta(item.multiplier);
+      return twoLineRow(
+        `${meta.emoji} ${item.symbol}`,
+        meta.label,
+        meta.hex,
+        `${formatUSD(item.latestClose)} · ${formatDrawdown(item.drawdownPct)} จาก 52wk high`,
+      );
+    }),
+  ];
+  return bubble(buildDipMessage(analyses, latestDate), contents);
+};
+
+const pushLine = async (message: Flex): Promise<void> => {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   const userId = process.env.LINE_USER_ID;
   if (!token || !userId) {
@@ -87,7 +221,7 @@ const pushLine = async (message: string): Promise<void> => {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ to: userId, messages: [{ type: 'text', text: message }] }),
+    body: JSON.stringify({ to: userId, messages: [message] }),
   });
   if (!response.ok) {
     throw new Error(`LINE push failed HTTP ${response.status}: ${await response.text()}`);
@@ -115,29 +249,56 @@ const main = async (): Promise<void> => {
   const force = process.env.FORCE_SEND === '1';
   const dryRun = process.env.DRY_RUN === '1';
   const { month, day } = bangkokMonthDay();
-  const state = readJson<{ lastSentMonth?: string; lastDailyDate?: string }>(
-    STATE_PATH,
-    {},
-  );
+  const state = readJson<{
+    lastSentMonth?: string;
+    lastDailyDate?: string;
+    dipAlerts?: Record<string, string>;
+  }>(STATE_PATH, {});
   const nextState = { ...state };
   let sent = false;
 
   // Daily alert: once per new EOD close (auto-skips weekends/holidays).
   const dailyDue = force || state.lastDailyDate !== latestDate;
   if (dailyAnalyses.length > 0 && dailyDue) {
-    const message = buildDailyMessage(dailyAnalyses, latestDate);
-    console.log(message);
+    const message = dailyFlex(dailyAnalyses, latestDate);
+    console.log(String(message.altText));
     if (!dryRun) await pushLine(message);
     nextState.lastDailyDate = latestDate;
+    sent = true;
+  }
+
+  // Mid-month dip alert: dca tickers that dropped past the threshold, once per
+  // symbol per month.
+  const dipState: Record<string, string> = { ...(state.dipAlerts ?? {}) };
+  const dips = dcaAnalyses.filter(
+    (item) => item.drawdownPct <= DIP_THRESHOLD && (force || dipState[item.symbol] !== month),
+  );
+  if (dips.length > 0) {
+    const message = dipFlex(dips, latestDate);
+    console.log(String(message.altText));
+    if (!dryRun) await pushLine(message);
+    for (const item of dips) dipState[item.symbol] = month;
+    nextState.dipAlerts = dipState;
     sent = true;
   }
 
   // Monthly DCA: once per calendar month on/after BUY_DAY_OF_MONTH.
   const monthlyDue = force || (state.lastSentMonth !== month && day >= BUY_DAY_OF_MONTH);
   if (dcaAnalyses.length > 0 && monthlyDue) {
-    const message = buildMessage(dcaAnalyses, failed, latestDate);
-    console.log(message);
-    if (!dryRun) await pushLine(message);
+    const message = dcaFlex(dcaAnalyses, failed, latestDate);
+    console.log(String(message.altText));
+    if (!dryRun) {
+      await pushLine(message);
+      appendLedger(
+        dcaAnalyses.map((item) => ({
+          date: latestDate,
+          symbol: item.symbol,
+          amountTHB: item.recommendedTHB,
+          priceUSD: item.latestClose,
+          units: item.recommendedTHB / item.latestClose,
+        })),
+      );
+    }
     nextState.lastSentMonth = month;
     sent = true;
   }
