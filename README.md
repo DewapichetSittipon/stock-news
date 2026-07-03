@@ -1,6 +1,6 @@
 # 📊 Smart DCA Dashboard
 
-**Live:** https://smart-dca.appstg.site/
+**Live:** https://smart-dca-stock.appstg.site/
 
 Pure-frontend dashboard for four ETFs/stocks (VOO, SCHD, QQQM, SNDK) with a
 LINE notification recommending how aggressively to buy each, using a

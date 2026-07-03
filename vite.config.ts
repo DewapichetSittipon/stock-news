@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Served from a custom domain (smart-dca.appstg.site) at the site root, so
+// Served from a custom domain (smart-dca-stock.appstg.site) at the site root, so
 // base is '/'. The browser reads the committed public/*.json produced by the
 // GitHub Action — no dev proxy or API key needed.
 export default defineConfig({
