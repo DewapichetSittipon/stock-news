@@ -28,6 +28,14 @@ export const formatThaiDate = (iso: string): string => {
   });
 };
 
+// Unix seconds (e.g. a live-quote trade time) → Bangkok clock "HH:MM".
+export const formatClock = (unixSeconds: number): string =>
+  new Date(unixSeconds * 1000).toLocaleTimeString('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Bangkok',
+  });
+
 // Full ISO timestamp (e.g. prices.json `generatedAt`) → Thai date + time.
 export const formatThaiDateTime = (iso: string): string => {
   if (!iso) return '';

@@ -35,6 +35,11 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+        env:
+          # Optional: base URL of the Cloudflare live-quote proxy (see /worker).
+          # Set a repo Variable of this name to enable the daily-card live
+          # overlay; unset = dashboard uses the committed EOD prices.json.
+          VITE_QUOTE_PROXY_URL: ${{ vars.VITE_QUOTE_PROXY_URL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

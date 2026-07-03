@@ -1,7 +1,9 @@
 import { AnalyticsChart } from './AnalyticsChart';
 import { MultiplierBadge } from './MultiplierBadge';
+import { useLiveQuote } from '../hooks/useLiveQuote';
 import { multiplierMeta } from '../utils/multiplier';
 import {
+  formatClock,
   formatDrawdown,
   formatSignedPct,
   formatSignedUSD,
@@ -38,9 +40,19 @@ const Stat = ({
 export const StockCard = ({ analytics, usdThb }: Props): JSX.Element => {
   const isDaily = analytics.mode === 'daily';
   const meta = multiplierMeta(analytics.multiplier);
-  const changeColor = analytics.dailyChangePct >= 0 ? UP : DOWN;
+
+  // Live overlay for daily-mode tickers; falls back to EOD when the proxy is
+  // unset/unreachable or for dca tickers (the hook stays disabled there, so
+  // `live` is null and every value below reads from the committed EOD data).
+  const live = useLiveQuote(analytics.symbol, isDaily);
+  const price = live ? live.price : analytics.latestClose;
+  const changePct = live ? live.changePct : analytics.dailyChangePct;
+  const changeUsd = live ? live.changeUsd : analytics.dailyChangeUsd;
+  const marketOpen = live?.marketState === 'REGULAR';
+
+  const changeColor = changePct >= 0 ? UP : DOWN;
   const accent = isDaily ? changeColor : meta.hex;
-  const priceTHB = usdThb ? analytics.latestClose * usdThb : null;
+  const priceTHB = usdThb ? price * usdThb : null;
 
   const rsiColor =
     analytics.rsi14 < 30 ? UP : analytics.rsi14 > 70 ? DOWN : '#e2e8f0';
@@ -57,22 +69,32 @@ export const StockCard = ({ analytics, usdThb }: Props): JSX.Element => {
         ) : (
           <MultiplierBadge multiplier={analytics.multiplier} />
         )}
+        {marketOpen && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
+            LIVE
+          </span>
+        )}
       </div>
       <p className="text-sm text-slate-400">{analytics.name}</p>
 
       <div className="mt-4 flex items-end justify-between gap-3">
         <div>
-          <p className="text-2xl font-semibold text-white">
-            {formatUSD(analytics.latestClose)}
-          </p>
+          <p className="text-2xl font-semibold text-white">{formatUSD(price)}</p>
           {priceTHB !== null && (
             <p className="text-xs text-slate-500">≈ {formatTHB(priceTHB)}</p>
           )}
           {isDaily ? (
-            <p className="text-sm font-medium" style={{ color: changeColor }}>
-              {formatSignedPct(analytics.dailyChangePct)} (
-              {formatSignedUSD(analytics.dailyChangeUsd)}) วันนี้
-            </p>
+            <>
+              <p className="text-sm font-medium" style={{ color: changeColor }}>
+                {formatSignedPct(changePct)} ({formatSignedUSD(changeUsd)}) วันนี้
+              </p>
+              {live && (
+                <p className="text-[10px] text-slate-500">
+                  {marketOpen ? '● ราคาสด' : 'ปิดตลาด'} · {formatClock(live.time)}
+                </p>
+              )}
+            </>
           ) : (
             <p className="text-sm" style={{ color: accent }}>
               {formatDrawdown(analytics.drawdownPct)} จาก 52wk high
@@ -84,7 +106,7 @@ export const StockCard = ({ analytics, usdThb }: Props): JSX.Element => {
             <>
               <p className="text-xs uppercase tracking-wide text-slate-500">เทียบเมื่อวาน</p>
               <p className="text-xl font-bold" style={{ color: changeColor }}>
-                {formatSignedPct(analytics.dailyChangePct)}
+                {formatSignedPct(changePct)}
               </p>
             </>
           ) : (

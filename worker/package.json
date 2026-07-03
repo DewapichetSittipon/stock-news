@@ -1,0 +1,17 @@
+{
+  "name": "smart-dca-quote-proxy",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Read-only Yahoo live-quote proxy for the Smart DCA dashboard's daily-mode tickers.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4",
+    "typescript": "^5.5.4",
+    "wrangler": "^4"
+  }
+}

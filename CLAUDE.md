@@ -50,6 +50,18 @@ Keep it DOM-free and Node-safe (that's also why the Vitest env is `node`).
    React Query) recomputes the **same** `analyzeTicker` output client-side. The
    Backtest tab and Portfolio view read the same static files.
 
+### Live-quote overlay (optional, `worker/`)
+
+`worker/` is a standalone, read-only Cloudflare Worker (Yahoo-backed) that serves
+a live intraday price for `mode: "daily"` tickers **only** — the browser can't
+call Yahoo directly (CORS). `useLiveQuote` polls it (`GET /quote?symbol=`) while
+the US market is open and `StockCard` overlays the price with a LIVE badge. It is
+purely additive: the Smart DCA signal, `prices.json`, and the LINE notification
+stay end-of-day, and when `VITE_QUOTE_PROXY_URL` is unset the dashboard silently
+falls back to the committed EOD snapshot. Deploy + wiring in `worker/README.md`;
+keep `ALLOWED_SYMBOLS` (in `worker/wrangler.jsonc`) in sync with the daily-mode
+tickers in `config/tickers.json`.
+
 ### The Smart DCA signal
 
 Drawdown = latest close vs trailing-252-day high. Drawdown bands map to a Buy

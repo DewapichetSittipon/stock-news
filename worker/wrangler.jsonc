@@ -1,0 +1,19 @@
+{
+  // Read-only live-quote proxy for the Smart DCA dashboard. Only the browser
+  // display of `mode: "daily"` tickers uses it; the EOD signal, prices.json and
+  // the LINE notification are untouched. See ./README.md to deploy.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "smart-dca-quote-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-03",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    // Comma-separated symbols the proxy will quote — keep in sync with the
+    // `mode: "daily"` entries in config/tickers.json. Empty = allow any
+    // format-valid symbol (still Yahoo-only, still cached).
+    "ALLOWED_SYMBOLS": "SNDK"
+  }
+}
