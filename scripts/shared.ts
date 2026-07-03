@@ -111,7 +111,7 @@ export const writePricesFile = (
   writeJson(PRICES_PATH, file);
 };
 
-export const refreshNews = async (configs: TickerConfig[]): Promise<void> => {
+export const refreshNews = async (configs: TickerConfig[]): Promise<NewsDigest> => {
   const digest = readJson<NewsDigest>(NEWS_PATH, {});
   const parser = new XMLParser();
 
@@ -136,6 +136,7 @@ export const refreshNews = async (configs: TickerConfig[]): Promise<void> => {
     }
   }
   writeJson(NEWS_PATH, digest);
+  return digest;
 };
 
 // Append monthly buys to the ledger, skipping any (date, symbol) already there

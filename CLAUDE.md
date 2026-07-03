@@ -39,12 +39,16 @@ Keep it DOM-free and Node-safe (that's also why the Vitest env is `node`).
    turns each into a `TickerAnalytics`. Partial ticker failures are tolerated;
    total failure throws loudly (ADR-0003). Output is written to
    `public/prices.json` (closes + dividends + `usdThb`) and `public/news.json`.
-2. **Notify (`scripts/dailyNoti.ts`).** Three independent LINE streams, each with
+2. **Notify (`scripts/dailyNoti.ts`).** Four independent LINE streams, each with
    its own gate in `.state/last-sent.json`: a **daily** up/down alert per new EOD
    close (`lastDailyDate`), a **monthly** Smart DCA message on/after
-   `BUY_DAY_OF_MONTH` (`lastSentMonth`), and a **mid-month dip** alert once per
-   symbol per month (`dipAlerts`). The monthly send also appends buys to
-   `public/ledger.json` (dedup'd by `date|symbol`).
+   `BUY_DAY_OF_MONTH` (`lastSentMonth`), a **mid-month dip** alert once per
+   symbol per month (`dipAlerts`), and a **daily news digest** of recent
+   per-ticker headlines, deduped by article link so a story is never re-sent
+   (`sentNews`, the set of links currently in the feed). The monthly send also
+   appends buys to `public/ledger.json` (dedup'd by `date|symbol`). The news
+   digest is headline-only (Google News RSS has no article body); it groups the
+   latest few headlines per ticker with Thai framing.
 3. **Render (browser).** `src/services/prices.ts` fetches the committed
    `prices.json`; `src/services/analytics.ts` (via `useStockAnalytics` +
    React Query) recomputes the **same** `analyzeTicker` output client-side. The
