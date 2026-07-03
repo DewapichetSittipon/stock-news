@@ -1,5 +1,6 @@
 import { AnalyticsChart } from './AnalyticsChart';
 import { MultiplierBadge } from './MultiplierBadge';
+import { StatGlossary } from './StatGlossary';
 import { useLiveQuote } from '../hooks/useLiveQuote';
 import { multiplierMeta } from '../utils/multiplier';
 import {
@@ -155,6 +156,8 @@ export const StockCard = ({ analytics, usdThb }: Props): JSX.Element => {
           showMultiplier={!isDaily}
         />
       </div>
+
+      <StatGlossary isDaily={isDaily} />
     </div>
   );
 };

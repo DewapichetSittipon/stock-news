@@ -1,5 +1,6 @@
 import { DataStatus } from '../components/DataStatus';
 import { NewsCard } from '../components/NewsCard';
+import { PlainSummary } from '../components/PlainSummary';
 import { Portfolio } from '../components/Portfolio';
 import { StockCard } from '../components/StockCard';
 import { useLedger } from '../hooks/useLedger';
@@ -25,6 +26,8 @@ export const Dashboard = (): JSX.Element => {
 
   return (
     <div className="px-4 py-5 sm:px-6">
+      <PlainSummary dca={dcaData} boughtThisMonth={boughtThisMonth} />
+
       <Portfolio ledger={ledger.data ?? []} analytics={data} usdThb={usdThb} />
 
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
