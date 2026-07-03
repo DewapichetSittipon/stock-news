@@ -28,22 +28,32 @@ const BUY_DAY_OF_MONTH = 1;
 // A dca ticker at/below this drawdown triggers a mid-month "buy more" alert.
 const DIP_THRESHOLD = -10;
 
-// Current month ("YYYY-MM") and day-of-month in the user's timezone.
-const bangkokMonthDay = (): { month: string; day: number } => {
-  const parts = new Intl.DateTimeFormat('en-CA', {
+// Today's date ("YYYY-MM-DD") in the user's timezone — i.e. when this run
+// fetched the data. Shown in every message so a stale snapshot (data date <
+// fetch date, e.g. over a market holiday) is obvious at a glance.
+const bangkokDate = (): string =>
+  new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Bangkok',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(new Date());
-  const [year, month, day] = parts.split('-');
+
+// Current month ("YYYY-MM") and day-of-month in the user's timezone.
+const bangkokMonthDay = (): { month: string; day: number } => {
+  const [year, month, day] = bangkokDate().split('-');
   return { month: `${year}-${month}`, day: Number(day) };
 };
+
+// Footer line appended to every message: when this run pulled the data.
+const fetchedLine = (fetchedDate: string): string =>
+  `🕐 ดึงข้อมูลเมื่อ ${formatThaiDate(fetchedDate)}`;
 
 const buildMessage = (
   analyses: TickerAnalytics[],
   failed: string[],
   latestDate: string,
+  fetchedDate: string,
 ): string => {
   const lines = analyses.map((item) => {
     const meta = multiplierMeta(item.multiplier);
@@ -62,6 +72,7 @@ const buildMessage = (
     `รวมเดือนนี้: ${formatTHB(total)}`,
   ];
   if (failed.length > 0) parts.push('', `⚠️ ดึงข้อมูลไม่สำเร็จ: ${failed.join(', ')}`);
+  parts.push('', fetchedLine(fetchedDate));
   return parts.join('\n');
 };
 
@@ -69,6 +80,7 @@ const buildMessage = (
 const buildDailyMessage = (
   analyses: TickerAnalytics[],
   latestDate: string,
+  fetchedDate: string,
 ): string => {
   const lines = analyses.map((item) => {
     const up = item.dailyChangePct >= 0;
@@ -77,11 +89,21 @@ const buildDailyMessage = (
       `   ${formatSignedPct(item.dailyChangePct)} (${formatSignedUSD(item.dailyChangeUsd)}) จากเมื่อวาน`,
     ].join('\n');
   });
-  return [`📈 ติดตามรายวัน — ${formatThaiDate(latestDate)}`, '', ...lines].join('\n');
+  return [
+    `📈 ติดตามรายวัน — ${formatThaiDate(latestDate)}`,
+    '',
+    ...lines,
+    '',
+    fetchedLine(fetchedDate),
+  ].join('\n');
 };
 
 // Mid-month opportunistic dip alert for dca tickers (drawdown <= threshold).
-const buildDipMessage = (analyses: TickerAnalytics[], latestDate: string): string => {
+const buildDipMessage = (
+  analyses: TickerAnalytics[],
+  latestDate: string,
+  fetchedDate: string,
+): string => {
   const lines = analyses.map((item) => {
     const meta = multiplierMeta(item.multiplier);
     return `${meta.emoji} ${item.symbol} — ${formatUSD(item.latestClose)} · ${formatDrawdown(item.drawdownPct)} (${meta.label})`;
@@ -91,6 +113,8 @@ const buildDipMessage = (analyses: TickerAnalytics[], latestDate: string): strin
     'ตัว DCA ต่อไปนี้ย่อลงแรง:',
     '',
     ...lines,
+    '',
+    fetchedLine(fetchedDate),
   ].join('\n');
 };
 
@@ -141,10 +165,22 @@ const twoLineRow = (
   ],
 });
 
+// Muted footer showing when the run fetched the data (mirrors fetchedLine in
+// the plain-text/altText). Callers append [SEP, fetchedNote(...)] to the body.
+const fetchedNote = (fetchedDate: string): Flex => ({
+  type: 'text',
+  text: fetchedLine(fetchedDate),
+  size: 'xxs',
+  color: '#64748b',
+  margin: 'md',
+  wrap: true,
+});
+
 const dcaFlex = (
   analyses: TickerAnalytics[],
   failed: string[],
   latestDate: string,
+  fetchedDate: string,
 ): Flex => {
   const total = analyses.reduce((sum, item) => sum + item.recommendedTHB, 0);
   const contents: Flex[] = [
@@ -173,10 +209,15 @@ const dcaFlex = (
   if (failed.length > 0) {
     contents.push({ type: 'text', text: `⚠️ พลาด: ${failed.join(', ')}`, size: 'xxs', color: '#f87171', margin: 'sm', wrap: true });
   }
-  return bubble(buildMessage(analyses, failed, latestDate), contents);
+  contents.push(SEP, fetchedNote(fetchedDate));
+  return bubble(buildMessage(analyses, failed, latestDate, fetchedDate), contents);
 };
 
-const dailyFlex = (analyses: TickerAnalytics[], latestDate: string): Flex => {
+const dailyFlex = (
+  analyses: TickerAnalytics[],
+  latestDate: string,
+  fetchedDate: string,
+): Flex => {
   const contents: Flex[] = [
     ...heading('📈 ติดตามรายวัน', formatThaiDate(latestDate)),
     SEP,
@@ -189,11 +230,17 @@ const dailyFlex = (analyses: TickerAnalytics[], latestDate: string): Flex => {
         `${formatUSD(item.latestClose)} · ${formatSignedUSD(item.dailyChangeUsd)} จากเมื่อวาน`,
       );
     }),
+    SEP,
+    fetchedNote(fetchedDate),
   ];
-  return bubble(buildDailyMessage(analyses, latestDate), contents);
+  return bubble(buildDailyMessage(analyses, latestDate, fetchedDate), contents);
 };
 
-const dipFlex = (analyses: TickerAnalytics[], latestDate: string): Flex => {
+const dipFlex = (
+  analyses: TickerAnalytics[],
+  latestDate: string,
+  fetchedDate: string,
+): Flex => {
   const contents: Flex[] = [
     ...heading('⚠️ จังหวะซื้อเพิ่ม', `${formatThaiDate(latestDate)} · ตัว DCA ย่อลงแรง`),
     SEP,
@@ -206,8 +253,10 @@ const dipFlex = (analyses: TickerAnalytics[], latestDate: string): Flex => {
         `${formatUSD(item.latestClose)} · ${formatDrawdown(item.drawdownPct)} จาก 52wk high`,
       );
     }),
+    SEP,
+    fetchedNote(fetchedDate),
   ];
-  return bubble(buildDipMessage(analyses, latestDate), contents);
+  return bubble(buildDipMessage(analyses, latestDate, fetchedDate), contents);
 };
 
 const pushLine = async (message: Flex): Promise<void> => {
@@ -251,6 +300,7 @@ const main = async (): Promise<void> => {
   const force = process.env.FORCE_SEND === '1';
   const dryRun = process.env.DRY_RUN === '1';
   const { month, day } = bangkokMonthDay();
+  const fetchedDate = bangkokDate();
   const state = readJson<{
     lastSentMonth?: string;
     lastDailyDate?: string;
@@ -262,7 +312,7 @@ const main = async (): Promise<void> => {
   // Daily alert: once per new EOD close (auto-skips weekends/holidays).
   const dailyDue = force || state.lastDailyDate !== latestDate;
   if (dailyAnalyses.length > 0 && dailyDue) {
-    const message = dailyFlex(dailyAnalyses, latestDate);
+    const message = dailyFlex(dailyAnalyses, latestDate, fetchedDate);
     console.log(String(message.altText));
     if (!dryRun) await pushLine(message);
     nextState.lastDailyDate = latestDate;
@@ -276,7 +326,7 @@ const main = async (): Promise<void> => {
     (item) => item.drawdownPct <= DIP_THRESHOLD && (force || dipState[item.symbol] !== month),
   );
   if (dips.length > 0) {
-    const message = dipFlex(dips, latestDate);
+    const message = dipFlex(dips, latestDate, fetchedDate);
     console.log(String(message.altText));
     if (!dryRun) await pushLine(message);
     for (const item of dips) dipState[item.symbol] = month;
@@ -287,7 +337,7 @@ const main = async (): Promise<void> => {
   // Monthly DCA: once per calendar month on/after BUY_DAY_OF_MONTH.
   const monthlyDue = force || (state.lastSentMonth !== month && day >= BUY_DAY_OF_MONTH);
   if (dcaAnalyses.length > 0 && monthlyDue) {
-    const message = dcaFlex(dcaAnalyses, failed, latestDate);
+    const message = dcaFlex(dcaAnalyses, failed, latestDate, fetchedDate);
     console.log(String(message.altText));
     if (!dryRun) {
       await pushLine(message);

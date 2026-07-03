@@ -2,10 +2,12 @@ name: Daily LINE Smart DCA
 
 on:
   schedule:
-    # Runs daily at 00:00 UTC (≈07:00 Asia/Bangkok) to refresh prices.json +
+    # Runs daily at 00:17 UTC (≈07:17 Asia/Bangkok) to refresh prices.json +
     # news.json for the dashboard; the LINE push itself is gated to once a
-    # month (see scripts/dailyNoti.ts / docs/adr/0005).
-    - cron: '0 0 * * *'
+    # month (see scripts/dailyNoti.ts / docs/adr/0005). Deliberately off the top
+    # of the hour: GitHub queues every ':00' cron at once and delays or silently
+    # drops them under load, so an odd minute is far more likely to actually run.
+    - cron: '17 0 * * *'
   workflow_dispatch: {}
 
 permissions:
