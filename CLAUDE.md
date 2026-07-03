@@ -113,7 +113,7 @@ multiplier bands are **code, not config**.
   plain-text builder). Formatting helpers are in `src/utils/format.ts`.
 - Ledger entries written after FX tracking carry `fxRate`; legacy ones don't, so
   Portfolio valuation must handle both (ADR-0007).
-- Tests cover the money logic only: `dcaCalculator`, `backtest`, `indicators`,
-  `multiplier`, `format`.
+- Tests cover the money logic and user-facing copy helpers: `dcaCalculator`,
+  `backtest`, `indicators`, `multiplier`, `format`, `portfolio`, `plain`.
 </content>
 </invoke>

@@ -1,5 +1,7 @@
+import { PortfolioChart } from './PortfolioChart';
 import { formatSignedPct, formatTHB } from '../utils/format';
-import type { LedgerEntry, TickerAnalytics } from '../types';
+import { portfolioSeries } from '../utils/portfolio';
+import type { LedgerEntry, PricePoint, TickerAnalytics } from '../types';
 
 interface Props {
   ledger: LedgerEntry[];
@@ -64,6 +66,10 @@ export const Portfolio = ({ ledger, analytics, usdThb }: Props): JSX.Element | n
   const dividendYield = value > 0 ? (annualDividend / value) * 100 : 0;
   const fxAware = ledger.some((entry) => entry.fxRate != null) && usdThb != null;
 
+  const histories: Record<string, PricePoint[]> = {};
+  for (const item of analytics) histories[item.symbol] = item.history;
+  const growth = portfolioSeries(ledger, histories);
+
   return (
     <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -83,6 +89,8 @@ export const Portfolio = ({ ledger, analytics, usdThb }: Props): JSX.Element | n
           </p>
         </div>
       </div>
+
+      <PortfolioChart points={growth} />
 
       {annualDividend > 0 && (
         <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-500/10 px-3 py-2">
