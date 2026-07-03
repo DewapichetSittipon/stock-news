@@ -1,5 +1,47 @@
 [
-  { "date": "2026-07-01", "symbol": "VOO", "amountTHB": 2000, "priceUSD": 685.46, "units": 2.917749 },
-  { "date": "2026-07-01", "symbol": "SCHD", "amountTHB": 1000, "priceUSD": 31.85, "units": 31.397174 },
-  { "date": "2026-07-01", "symbol": "QQQM", "amountTHB": 1000, "priceUSD": 298.61, "units": 3.348883 }
+  {
+    "date": "2026-07-01",
+    "symbol": "VOO",
+    "amountTHB": 2000,
+    "priceUSD": 685.46,
+    "units": 2.917749
+  },
+  {
+    "date": "2026-07-01",
+    "symbol": "SCHD",
+    "amountTHB": 1000,
+    "priceUSD": 31.85,
+    "units": 31.397174
+  },
+  {
+    "date": "2026-07-01",
+    "symbol": "QQQM",
+    "amountTHB": 1000,
+    "priceUSD": 298.61,
+    "units": 3.348883
+  },
+  {
+    "date": "2026-07-02",
+    "symbol": "VOO",
+    "amountTHB": 2000,
+    "priceUSD": 684.84,
+    "units": 2.920390164125927,
+    "fxRate": 33.14
+  },
+  {
+    "date": "2026-07-02",
+    "symbol": "SCHD",
+    "amountTHB": 1000,
+    "priceUSD": 32.39,
+    "units": 30.873726458783576,
+    "fxRate": 33.14
+  },
+  {
+    "date": "2026-07-02",
+    "symbol": "QQQM",
+    "amountTHB": 1000,
+    "priceUSD": 293.42,
+    "units": 3.4080839751891485,
+    "fxRate": 33.14
+  }
 ]
