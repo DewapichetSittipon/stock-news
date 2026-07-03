@@ -1,26 +1,5 @@
 [
   {
-    "date": "2026-07-01",
-    "symbol": "VOO",
-    "amountTHB": 2000,
-    "priceUSD": 685.46,
-    "units": 2.917749
-  },
-  {
-    "date": "2026-07-01",
-    "symbol": "SCHD",
-    "amountTHB": 1000,
-    "priceUSD": 31.85,
-    "units": 31.397174
-  },
-  {
-    "date": "2026-07-01",
-    "symbol": "QQQM",
-    "amountTHB": 1000,
-    "priceUSD": 298.61,
-    "units": 3.348883
-  },
-  {
     "date": "2026-07-02",
     "symbol": "VOO",
     "amountTHB": 2000,

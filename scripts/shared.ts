@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { XMLParser } from 'fast-xml-parser';
 import { analyzeTicker } from '../src/utils/dcaCalculator';
+import { filterNewMonthlyBuys } from '../src/utils/ledger';
 import { splitHeadline } from '../src/utils/news';
 import {
   parseUsdThb,
@@ -198,12 +199,12 @@ export const refreshNews = async (configs: TickerConfig[]): Promise<NewsDigest> 
   return digest;
 };
 
-// Append monthly buys to the ledger, skipping any (date, symbol) already there
-// so re-runs / manual FORCE_SEND on the same day don't create duplicates.
+// Append monthly buys to the ledger, skipping any symbol already recorded in
+// the same calendar month so a later re-run / manual FORCE_SEND (which lands
+// with a different EOD date) can't double-record the month.
 export const appendLedger = (entries: LedgerEntry[]): void => {
   const ledger = readJson<LedgerEntry[]>(LEDGER_PATH, []);
-  const seen = new Set(ledger.map((entry) => `${entry.date}|${entry.symbol}`));
-  const fresh = entries.filter((entry) => !seen.has(`${entry.date}|${entry.symbol}`));
+  const fresh = filterNewMonthlyBuys(ledger, entries);
   if (fresh.length === 0) return;
   writeJson(LEDGER_PATH, [...ledger, ...fresh]);
 };

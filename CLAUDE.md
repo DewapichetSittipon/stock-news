@@ -114,6 +114,7 @@ multiplier bands are **code, not config**.
 - Ledger entries written after FX tracking carry `fxRate`; legacy ones don't, so
   Portfolio valuation must handle both (ADR-0007).
 - Tests cover the money logic and user-facing copy helpers: `dcaCalculator`,
-  `backtest`, `indicators`, `multiplier`, `format`, `portfolio`, `plain`.
+  `backtest`, `indicators`, `multiplier`, `format`, `portfolio`, `ledger`,
+  `plain`.
 </content>
 </invoke>
