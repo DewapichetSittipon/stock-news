@@ -48,7 +48,13 @@ Keep it DOM-free and Node-safe (that's also why the Vitest env is `node`).
    (`sentNews`, the set of links currently in the feed). The monthly send also
    appends buys to `public/ledger.json` (dedup'd by `date|symbol`). The news
    digest is headline-only (Google News RSS has no article body); it groups the
-   latest few headlines per ticker with Thai framing.
+   latest few headlines per ticker with Thai framing. Headlines are translated
+   to Thai at ingest via a free, keyless translation endpoint
+   (`translateHeadlines` in `shared.ts`), cached in `news.json`
+   (`NewsItem.titleTh`, keyed by link) so each is translated once; the call is
+   best-effort and falls back to the English headline on failure. Both the
+   dashboard and LINE read `titleTh` (see `displayHeadline` in
+   `src/utils/news.ts`).
 3. **Render (browser).** `src/services/prices.ts` fetches the committed
    `prices.json`; `src/services/analytics.ts` (via `useStockAnalytics` +
    React Query) recomputes the **same** `analyzeTicker` output client-side. The

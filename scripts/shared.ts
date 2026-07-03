@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { XMLParser } from 'fast-xml-parser';
 import { analyzeTicker } from '../src/utils/dcaCalculator';
+import { splitHeadline } from '../src/utils/news';
 import {
   parseUsdThb,
   parseYahooChart,
@@ -111,10 +112,51 @@ export const writePricesFile = (
   writeJson(PRICES_PATH, file);
 };
 
+// Translate one English string to Thai via Google's free, keyless endpoint.
+// Best-effort: returns null on any failure so the caller keeps the English.
+const translateOne = async (text: string): Promise<string | null> => {
+  try {
+    const url =
+      'https://translate.googleapis.com/translate_a/single' +
+      `?client=gtx&sl=en&tl=th&dt=t&q=${encodeURIComponent(text)}`;
+    const response = await fetch(url, { headers: { 'User-Agent': UA } });
+    if (!response.ok) throw new Error(`Translate HTTP ${response.status}`);
+    const json = await response.json();
+    // Shape: [[[ "<thai segment>", "<src segment>", … ], …], … ]
+    const segments = json?.[0];
+    if (!Array.isArray(segments)) throw new Error('unexpected translate response');
+    const thai = segments.map((seg: unknown[]) => String(seg?.[0] ?? '')).join('').trim();
+    return thai || null;
+  } catch (error) {
+    console.error('[translate]', error);
+    return null;
+  }
+};
+
+// Translate English headlines to Thai (best-effort, no API key). Returns an
+// array aligned to the input; an entry is null when a translation fails so the
+// caller falls back to the English headline. Volume is tiny (only uncached
+// headlines) so sequential requests are fine and gentle on the endpoint.
+export const translateHeadlines = async (
+  headlines: string[],
+): Promise<(string | null)[]> => {
+  const out: (string | null)[] = [];
+  for (const headline of headlines) out.push(await translateOne(headline));
+  return out;
+};
+
 export const refreshNews = async (configs: TickerConfig[]): Promise<NewsDigest> => {
-  const digest = readJson<NewsDigest>(NEWS_PATH, {});
+  const previous = readJson<NewsDigest>(NEWS_PATH, {});
   const parser = new XMLParser();
 
+  // Reuse translations we already have (keyed by link) so each headline is
+  // translated once, then cached in news.json — daily cost is just new stories.
+  const cache = new Map<string, string>();
+  for (const items of Object.values(previous)) {
+    for (const item of items) if (item.link && item.titleTh) cache.set(item.link, item.titleTh);
+  }
+
+  const digest: NewsDigest = { ...previous };
   for (const config of configs) {
     try {
       const query = encodeURIComponent(`${config.symbol} ETF stock`);
@@ -126,15 +168,32 @@ export const refreshNews = async (configs: TickerConfig[]): Promise<NewsDigest> 
       const list = Array.isArray(raw) ? raw : [raw];
       digest[config.symbol] = list
         .slice(0, 6)
-        .map((item: Record<string, unknown>): NewsItem => ({
-          title: String(item.title ?? ''),
-          link: String(item.link ?? ''),
-          date: item.pubDate ? new Date(String(item.pubDate)).toISOString() : '',
-        }));
+        .map((item: Record<string, unknown>): NewsItem => {
+          const link = String(item.link ?? '');
+          const cached = cache.get(link);
+          return {
+            title: String(item.title ?? ''),
+            link,
+            date: item.pubDate ? new Date(String(item.pubDate)).toISOString() : '',
+            ...(cached ? { titleTh: cached } : {}),
+          };
+        });
     } catch (error) {
       console.error(`[news] ${config.symbol}`, error);
     }
   }
+
+  // Translate only the headlines we don't have Thai for yet (one batched call).
+  const pending = Object.values(digest)
+    .flat()
+    .filter((item) => item.link && !item.titleTh);
+  if (pending.length > 0) {
+    const thai = await translateHeadlines(pending.map((item) => splitHeadline(item.title).headline));
+    pending.forEach((item, i) => {
+      if (thai[i]) item.titleTh = thai[i]!;
+    });
+  }
+
   writeJson(NEWS_PATH, digest);
   return digest;
 };

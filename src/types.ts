@@ -44,7 +44,8 @@ export interface TickerAnalytics {
 }
 
 export interface NewsItem {
-  title: string;
+  title: string; // English, as fetched from Google News ("Headline - Source")
+  titleTh?: string; // Thai translation of the headline, added at ingest (best-effort)
   link: string;
   date: string; // ISO, may be empty
 }

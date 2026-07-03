@@ -19,6 +19,7 @@ import {
   formatThaiMonth,
   formatUSD,
 } from '../src/utils/format';
+import { displayHeadline, splitHeadline } from '../src/utils/news';
 import type { NewsItem, TickerAnalytics } from '../src/types';
 
 // The user DCAs once a month, on this day (or the first run on/after it). See
@@ -125,14 +126,6 @@ const buildDipMessage = (
   ].join('\n');
 };
 
-// Google News RSS titles are "Headline - Source"; split off the trailing
-// source so it can render as a compact label instead of cluttering the headline.
-const splitHeadline = (title: string): { headline: string; source: string } => {
-  const idx = title.lastIndexOf(' - ');
-  if (idx === -1) return { headline: title.trim(), source: '' };
-  return { headline: title.slice(0, idx).trim(), source: title.slice(idx + 3).trim() };
-};
-
 // "Source · 1 ก.ค. 2026" sub-label for a headline (either part may be missing).
 const newsMeta = (item: NewsItem): string => {
   const { source } = splitHeadline(item.title);
@@ -147,9 +140,8 @@ const buildNewsMessage = (
 ): string => {
   const blocks = groups.map(({ symbol, items }) => {
     const lines = items.map((item) => {
-      const { headline } = splitHeadline(item.title);
       const meta = newsMeta(item);
-      return `• ${headline}${meta ? `\n   ${meta}` : ''}`;
+      return `• ${displayHeadline(item)}${meta ? `\n   ${meta}` : ''}`;
     });
     return [symbol, ...lines].join('\n');
   });
@@ -306,12 +298,11 @@ const dipFlex = (
 
 // One tappable headline (opens the article) with its source · date sub-label.
 const newsRow = (item: NewsItem): Flex => {
-  const { headline } = splitHeadline(item.title);
   const meta = newsMeta(item);
   const contents: Flex[] = [
     {
       type: 'text',
-      text: `• ${headline}`,
+      text: `• ${displayHeadline(item)}`,
       size: 'sm',
       color: '#e2e8f0',
       wrap: true,
