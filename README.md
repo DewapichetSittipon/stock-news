@@ -47,9 +47,11 @@ drawdown → multiplier bands live in `src/utils/dcaCalculator.ts` (not config).
 
 ## LINE notifications
 
-The Action (`.github/workflows/daily-line-noti.yml`) runs daily at 00:00 UTC
-(~07:00 Bangkok) and refreshes `public/prices.json` + `public/news.json` for the
-dashboard. It pushes LINE in two independent streams (state in `.state/last-sent.json`):
+The Action (`.github/workflows/daily-line-noti.yml`) runs four times each morning
+(00:17–03:17 UTC, ~07:17–10:17 Bangkok) and refreshes `public/prices.json` +
+`public/news.json` for the dashboard. The repeated runs are deliberate — GitHub
+delays and silently drops scheduled crons, so the first run that sees a new EOD
+close sends and the rest no-op via the state gates. It pushes LINE in two independent streams (state in `.state/last-sent.json`):
 
 - **`daily` tickers** — an up/down alert once per new EOD close (`lastDailyDate`),
   auto-skipping weekends/holidays.

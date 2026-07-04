@@ -90,9 +90,11 @@ multiplier bands are **code, not config**.
 
 ## CI / deploy
 
-- `.github/workflows/daily-line-noti.yml` runs `dailyNoti.ts` daily at 00:00 UTC
-  (~07:00 Bangkok), commits refreshed `public/*.json` + state, and pushes.
-  `workflow_dispatch` runs set `FORCE_SEND=1`.
+- `.github/workflows/daily-line-noti.yml` runs `dailyNoti.ts` four times each
+  morning (00:17–03:17 UTC, ~07:17–10:17 Bangkok), commits refreshed
+  `public/*.json` + state, and pushes. The repeated fires are redundancy against
+  GitHub dropping scheduled crons; the send-gates make every run past the first
+  a no-op. `workflow_dispatch` runs set `FORCE_SEND=1`.
 - `.github/workflows/deploy-pages.yml` deploys to GitHub Pages on human pushes
   **and** on completion of the daily workflow (its `GITHUB_TOKEN` push can't
   trigger `push` events, so the deploy listens on `workflow_run`). Build runs

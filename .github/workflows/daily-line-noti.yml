@@ -2,12 +2,17 @@ name: Daily LINE Smart DCA
 
 on:
   schedule:
-    # Runs daily at 00:17 UTC (≈07:17 Asia/Bangkok) to refresh prices.json +
-    # news.json for the dashboard; the LINE push itself is gated to once a
-    # month (see scripts/dailyNoti.ts / docs/adr/0005). Deliberately off the top
-    # of the hour: GitHub queues every ':00' cron at once and delays or silently
-    # drops them under load, so an odd minute is far more likely to actually run.
-    - cron: '17 0 * * *'
+    # Fires four times each morning — 00:17 / 01:17 / 02:17 / 03:17 UTC
+    # (≈07:17–10:17 Asia/Bangkok). GitHub does NOT guarantee scheduled runs: it
+    # delays `schedule` events under load and silently DROPS them outright, so a
+    # lone daily cron regularly skips a day. Redundant attempts fix that — the
+    # send-gates in scripts/dailyNoti.ts (lastDailyDate / lastSentMonth /
+    # dipAlerts / sentNews) mean the first run that sees a new EOD close sends
+    # and every later run that day no-ops, so extra fires cost nothing but
+    # reliability. Odd minute (:17) on purpose: GitHub queues every ':00' cron
+    # at once and is likeliest to delay/drop those. The push itself is still
+    # gated to once a month for the DCA stream (see docs/adr/0005).
+    - cron: '17 0,1,2,3 * * *'
   workflow_dispatch: {}
 
 permissions:
