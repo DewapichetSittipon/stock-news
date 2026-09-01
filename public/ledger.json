@@ -22,5 +22,29 @@
     "priceUSD": 293.42,
     "units": 3.4080839751891485,
     "fxRate": 33.14
+  },
+  {
+    "date": "2026-08-31",
+    "symbol": "VOO",
+    "amountTHB": 2000,
+    "priceUSD": 704.89,
+    "units": 2.8373221353686393,
+    "fxRate": 33.19
+  },
+  {
+    "date": "2026-08-31",
+    "symbol": "SCHD",
+    "amountTHB": 1000,
+    "priceUSD": 34.89,
+    "units": 28.66150759529951,
+    "fxRate": 33.19
+  },
+  {
+    "date": "2026-08-31",
+    "symbol": "QQQM",
+    "amountTHB": 1000,
+    "priceUSD": 295.18,
+    "units": 3.3877633986042412,
+    "fxRate": 33.19
   }
 ]
